@@ -1,6 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Workspace
    version = "1.0">
+   <Group
+      location = "group:../Shared"
+      name = "Shared">
+      <FileRef
+         location = "container:../Shared/QuizRepo/QuizRepo.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "container:../Shared/QuizUI/QuizUI.xcodeproj">
+      </FileRef>
+   </Group>
    <FileRef
       location = "group:QuizApp.xcodeproj">
    </FileRef>
