@@ -62,22 +62,16 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		845521982D6B8A1F002EAE00 /* QuizApp */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = QuizApp;
 			sourceTree = "<group>";
 		};
 		845521AE2D6B8A22002EAE00 /* QuizAppTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = QuizAppTests;
 			sourceTree = "<group>";
 		};
 		845521B82D6B8A22002EAE00 /* QuizAppUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = QuizAppUITests;
 			sourceTree = "<group>";
 		};
@@ -125,13 +119,6 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		4F3FB0B8445F1C205F1CAE50 /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Pods;
-			sourceTree = "<group>";
-		};
 		8455218D2D6B8A1F002EAE00 = {
 			isa = PBXGroup;
 			children = (
@@ -139,7 +126,6 @@
 				845521AE2D6B8A22002EAE00 /* QuizAppTests */,
 				845521B82D6B8A22002EAE00 /* QuizAppUITests */,
 				845521972D6B8A1F002EAE00 /* Products */,
-				4F3FB0B8445F1C205F1CAE50 /* Pods */,
 				406B2EA1F300B924C1644C7A /* Frameworks */,
 			);
 			sourceTree = "<group>";
@@ -252,6 +238,8 @@
 			);
 			mainGroup = 8455218D2D6B8A1F002EAE00;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 845521972D6B8A1F002EAE00 /* Products */;
 			projectDirPath = "";
@@ -455,11 +443,14 @@
 				DEVELOPMENT_ASSET_PATHS = "\"QuizApp/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Infinity Quiz";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.trivia-games";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -483,11 +474,14 @@
 				DEVELOPMENT_ASSET_PATHS = "\"QuizApp/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Infinity Quiz";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.trivia-games";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

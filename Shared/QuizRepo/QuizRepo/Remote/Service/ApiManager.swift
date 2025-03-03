@@ -1,156 +1,99 @@
-import Alamofire
-import JDStatusBarNotification
-public class ApiManager {
-    public let sessionManager: SessionManager
-    private let reachability: ReachabilityManager
-    private static var sharedInstance: ApiManager = {
-        let manager = ApiManager(sessionManager: SessionManager(), reachability: ReachabilityManager.shared)
-        return manager
-    }()
-    private let queue = DispatchQueue(label: "com.quizapp.service", qos: .background, attributes: .concurrent)
+import Foundation
+import Combine
+import UIKit
+public class ApiManager: ObservableObject {
+    private let reachability: NetworkManager
+    private var cancellables = Set<AnyCancellable>()
     private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
-    var dataTask: DataRequest?
-    private var activityIndicator: UIActivityIndicatorView?
-    public static func shared() -> ApiManager {
-        return sharedInstance
-    }
-    private init(sessionManager: SessionManager, reachability: ReachabilityManager) {
-        self.sessionManager = sessionManager
+    private let queue = DispatchQueue(label: "com.quizapp.service", qos: .background, attributes: .concurrent)
+    // Singleton instance
+    public static let shared = ApiManager(reachability: NetworkManager.shared)
+    @Published var isNetworkReachable: Bool = false
+    private init(reachability: NetworkManager) {
         self.reachability = reachability
+        self.isNetworkReachable = reachability.isNetworkReachable
+        // Observe network changes
+        self.reachability.$isNetworkReachable
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] isReachable in
+                self?.isNetworkReachable = isReachable
+            }
+            .store(in: &cancellables)
     }
-    public func request<T: Decodable>(endPoint: ApiEndPoint, params: Parameters? = nil, requestBody: Bool = false, isChat: Bool = false, bodyParams: [String]? = nil, handler: @escaping ((T?, Error?) -> Void)) {
-        guard self.isNetworkReachable() else {
-            self.showToast(title: "No Internet", message: "Check your connection and try again.")
-            return
+    // MARK: - Network Request with Async/Await
+    public func request<T: Decodable>(endPoint: ApiEndPoint, params: [String: Any]? = nil, requestBody: Bool = false, bodyParams: [String: Any]? = nil) async -> Result<T, ApiError> {
+        // Check network availability before proceeding
+        guard self.isNetworkReachable else {
+            return .failure(.networkUnreachable)
         }
         startBackgroundTask()
-        let cachePolicy: URLRequest.CachePolicy = .reloadIgnoringLocalAndRemoteCacheData
-        var request = URLRequest(url: endPoint.url, cachePolicy: cachePolicy, timeoutInterval: 30)
-        request.httpShouldHandleCookies = false
-        request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+        var request = URLRequest(url: endPoint.url)
         request.httpMethod = endPoint.httpMethod.rawValue
         request.allHTTPHeaderFields = endPoint.headers
-        do {
-            request = try endPoint.encoding.encode(request, with: params)
-        } catch {
-            self.endBackgroundTask()
-            handler(nil, error)
-        }
-        if requestBody {
+        // Set request body if needed
+        if requestBody, let bodyParams = bodyParams {
             do {
-                if let params = bodyParams {
-                    let jsonData = try JSONSerialization.data(withJSONObject: params, options: [])
-                    request.httpBody = jsonData
-                }
+                request.httpBody = try JSONSerialization.data(withJSONObject: bodyParams, options: [])
             } catch {
                 self.endBackgroundTask()
-                handler(nil, error)
+                return .failure(.invalidRequestBody(error.localizedDescription))
             }
+        } else if let params = params {
+            // Encode parameters for GET or other methods
+            var urlComponents = URLComponents(url: endPoint.url, resolvingAgainstBaseURL: false)
+            urlComponents?.queryItems = params.map { URLQueryItem(name: $0.key, value: "\($0.value)") }
+            request.url = urlComponents?.url
         }
-        dataTask = self.sessionManager.request(request).responseData(queue: queue) { (response) in
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
             self.endBackgroundTask()
-            if let error = response.error {
-                if (error as NSError).code == NSURLErrorTimedOut {
-                    self.showToast(title: "error", message: "The request timed out.")
-                    print("Request timed out.")
-                } else {
-                    print("Error: \(error.localizedDescription)")
-                }
-                handler(nil, error)
-                return
-            }
-            guard let httpResponse = response.response else {
-                let error = NSError(domain: "ResponseError", code: 0, userInfo: [NSLocalizedDescriptionKey: "Invalid HTTP Response"])
-                handler(nil, error)
-                return
+            guard let httpResponse = response as? HTTPURLResponse else {
+                return .failure(.invalidResponse)
             }
             switch httpResponse.statusCode {
             case 200...299:
-                if let data = response.data {
-                    do {
-                        let result = try JSONDecoder().decode(T.self, from: data)
-                        handler(result, nil)
-                    } catch {
-                        print("ParseError: \(error.localizedDescription)")
-                        let error = NSError(domain: "ParseError", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: error.localizedDescription])
-                        handler(nil, error)
-                    }
-                } else {
-                    _ = NSError(domain: "ResponseError", code: 0, userInfo: [NSLocalizedDescriptionKey: "No data received"])
-                    handler(nil, nil)
+                do {
+                    let result = try JSONDecoder().decode(T.self, from: data)
+                    return .success(result)
+                } catch {
+                    return .failure(.parseError(error.localizedDescription))
                 }
-            case 400...499:
-                if httpResponse.statusCode == 401 {
-                    let notification = NSNotification.Name(rawValue: "api401")
-                    NotificationCenter.default.post(name: notification, object: nil)
-                } else if httpResponse.statusCode == 400 {
-                    if endPoint.path.contains("/login/generate-otp") || (endPoint.path.contains("login/verify-otp") && endPoint.httpMethod == .post) {
-                        if let data = response.data {
-                            do {
-                                let result = try JSONDecoder().decode(T.self, from: data)
-                                let error = NSError(domain: "ValidationError", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Invalid data"])
-                                handler(result, error)
-                            } catch {
-                                print("ParseError: \(error.localizedDescription)")
-                                let error = NSError(domain: "ParseError", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: error.localizedDescription])
-                                handler(nil, error)
-                            }
-                        } else {
-                            let error = NSError(domain: "ResponseError", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "No data received"])
-                            handler(nil, nil)
-                        }
-                        return
-                    }
-                } else if httpResponse.statusCode == 403 {
-                    if isChat {
-                        if endPoint.path.contains("/members/me") || (endPoint.path.hasSuffix("/members")  || (endPoint.path.hasSuffix("/stats")) && endPoint.httpMethod == .get) {
-                        } else {
-                            self.showToast(title: "error", message: "Something went wrong", duration: 3.0)
-                        }
-                    } else {
-                        let notification = NSNotification.Name(rawValue: "api403")
-                        NotificationCenter.default.post(name: notification, object: nil)
-                    }
-                }
-                let error = NSError(domain: "ClientError", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Client Error"])
-                handler(nil, error)
-            case 500...599:
-                let error = NSError(domain: "ServerError", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Server Error"])
-                handler(nil, error)
-            default:
-                let error = NSError(domain: "UnknownError", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Unknown Error"])
-                handler(nil, error)
+            case 400: return .failure(.badRequest)
+            case 401: return .failure(.unauthorized)
+            case 403: return .failure(.forbidden)
+            case 400...499: return .failure(.clientError)
+            case 500...599: return .failure(.serverError)
+            default: return .failure(.unknownError)
             }
+        } catch {
+            self.endBackgroundTask()
+            return .failure(.networkError(error.localizedDescription))
         }
     }
-}
-extension ApiManager {
-    public func isNetworkReachable() -> Bool {
-        return reachability.isNetworkReachable()
-    }
-    fileprivate func startBackgroundTask() {
-        backgroundTask = UIApplication.shared.beginBackgroundTask { [weak self] in
-            self?.endBackgroundTask()
+    // MARK: - Background Task Handling
+    private func startBackgroundTask() {
+        backgroundTask = UIApplication.shared.beginBackgroundTask {
+            self.endBackgroundTask()
         }
     }
-    fileprivate func endBackgroundTask() {
-        UIApplication.shared.endBackgroundTask(backgroundTask)
-        backgroundTask = .invalid
-    }
-    public func showToast(title: String?, message: String?, duration: TimeInterval = 2.0) {
-        DispatchQueue.main.async {
-            let styleName: () = NotificationPresenter.shared.updateDefaultStyle {  style in
-                style.leftViewStyle.spacing = 5.0
-                style.backgroundStyle.backgroundType = .pill
-                style.backgroundStyle.backgroundColor = .secondarySystemGroupedBackground
-                style.textStyle.textColor = .label
-                style.subtitleStyle.textColor = .secondaryLabel
-                style.animationType = .move
-                style.leftViewStyle.alignment = .centerWithText
-                return style
-            }
-            NotificationPresenter.shared.present(title?.capitalized ?? "", subtitle: message?.capitalized ?? "", includedStyle: .defaultStyle)
-            NotificationPresenter.shared.dismiss(after: duration) { presenter in }
+    private func endBackgroundTask() {
+        if backgroundTask != .invalid {
+            UIApplication.shared.endBackgroundTask(backgroundTask)
+            backgroundTask = .invalid
         }
+    }
+    // MARK: - Custom Error Handling
+    public enum ApiError: Error {
+        case networkUnreachable
+        case invalidResponse
+        case parseError(String)
+        case unauthorized
+        case badRequest
+        case forbidden
+        case clientError
+        case serverError
+        case unknownError
+        case networkError(String)
+        case invalidRequestBody(String)
     }
 }
