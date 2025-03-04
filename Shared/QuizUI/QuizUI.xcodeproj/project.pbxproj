@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		845522052D6B8B09002EAE00 /* QuizUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 845521FA2D6B8B09002EAE00 /* QuizUI.framework */; };
+		846608EF2D7788F400C2D40F /* QuizRepo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 846608EE2D7788F400C2D40F /* QuizRepo.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -23,6 +24,7 @@
 /* Begin PBXFileReference section */
 		845521FA2D6B8B09002EAE00 /* QuizUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = QuizUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		845522042D6B8B09002EAE00 /* QuizUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = QuizUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		846608EE2D7788F400C2D40F /* QuizRepo.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = QuizRepo.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -56,6 +58,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				846608EF2D7788F400C2D40F /* QuizRepo.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -75,6 +78,7 @@
 			children = (
 				845521FC2D6B8B09002EAE00 /* QuizUI */,
 				845522082D6B8B09002EAE00 /* QuizUITests */,
+				846608ED2D7788F400C2D40F /* Frameworks */,
 				845521FB2D6B8B09002EAE00 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -86,6 +90,14 @@
 				845522042D6B8B09002EAE00 /* QuizUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		846608ED2D7788F400C2D40F /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				846608EE2D7788F400C2D40F /* QuizRepo.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
