@@ -1,10 +1,3 @@
-//
-//  FetchCountriesUseCase.swift
-//  QuizApp
-//
-//  Created by Admin on 28/02/25.
-//
-
 import Foundation
 import QuizRepo
 protocol FetchCountriesUseCase {

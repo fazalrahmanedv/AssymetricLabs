@@ -6,9 +6,8 @@ public class ApiManager: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
     private let queue = DispatchQueue(label: "com.quizapp.service", qos: .background, attributes: .concurrent)
-    // Singleton instance
     public static let shared = ApiManager(reachability: NetworkManager.shared)
-    @Published var isNetworkReachable: Bool = false
+    @Published public var isNetworkReachable: Bool = false
     private init(reachability: NetworkManager) {
         self.reachability = reachability
         self.isNetworkReachable = reachability.isNetworkReachable
@@ -30,7 +29,6 @@ public class ApiManager: ObservableObject {
         var request = URLRequest(url: endPoint.url)
         request.httpMethod = endPoint.httpMethod.rawValue
         request.allHTTPHeaderFields = endPoint.headers
-        // Set request body if needed
         if requestBody, let bodyParams = bodyParams {
             do {
                 request.httpBody = try JSONSerialization.data(withJSONObject: bodyParams, options: [])
@@ -39,7 +37,6 @@ public class ApiManager: ObservableObject {
                 return .failure(.invalidRequestBody(error.localizedDescription))
             }
         } else if let params = params {
-            // Encode parameters for GET or other methods
             var urlComponents = URLComponents(url: endPoint.url, resolvingAgainstBaseURL: false)
             urlComponents?.queryItems = params.map { URLQueryItem(name: $0.key, value: "\($0.value)") }
             request.url = urlComponents?.url

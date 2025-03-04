@@ -1,9 +1,5 @@
-import SwiftUI
-import Combine
 import QuizRepo
-import SwiftUI
-import Combine
-class QuizAppViewModel: ObservableObject {
+class CountriesViewModel: ObservableObject {
     @Published var countryList: [QuizRepo.Countries] = []
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?

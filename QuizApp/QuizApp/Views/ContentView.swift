@@ -1,8 +1,9 @@
 import SwiftUI
 import QuizRepo
 import QuizUI
+
 struct ContentView: View {
-    @StateObject private var viewModel = QuizAppViewModel(
+    @StateObject private var viewModel = CountriesViewModel(
         fetchCountriesUseCase: FetchCountriesUseCaseImpl(repository: QuizAppRepositoryImpl())
     )
     @State private var searchText = ""
@@ -11,6 +12,7 @@ struct ContentView: View {
     @State private var navigateToQuiz = false
     @AppStorage("hasOnboarded") private var hasOnboarded: Bool = false
     @Environment(\.colorScheme) var colorScheme
+
     var backgroundGradient: LinearGradient {
         if colorScheme == .dark {
             return LinearGradient(
@@ -34,6 +36,7 @@ struct ContentView: View {
             )
         }
     }
+
     var body: some View {
         NavigationView {
             ZStack {
@@ -45,6 +48,7 @@ struct ContentView: View {
                         CountrySelectionButton(selectedCountry: $selectedCountry, showPicker: $showPicker)
                     }
                     .padding()
+                    
                     HStack(spacing: 20) {
                         Button(action: {
                             navigateToQuiz = true
@@ -58,6 +62,7 @@ struct ContentView: View {
                         }
                         
                         Button(action: {
+                            // Your action for Solve Bookmarks
                         }) {
                             Text("Solve Bookmarks")
                                 .frame(maxWidth: .infinity)
@@ -76,6 +81,7 @@ struct ContentView: View {
                 .onAppear {
                     viewModel.loadData()
                 }
+                #if !os(tvOS)
                 .sheet(isPresented: .constant(!hasOnboarded)) {
                     OnboardingView(
                         title: "Welcome to Infinity Quiz",
@@ -108,6 +114,8 @@ struct ContentView: View {
                         showPicker: $showPicker
                     )
                 }
+                #endif
+                
                 NavigationLink(destination: QuizLandingPage(), isActive: $navigateToQuiz) {
                     EmptyView()
                 }
@@ -129,5 +137,6 @@ struct ContentView: View {
                 }
             }
         }
+        .navigationViewStyle(StackNavigationViewStyle())  // Stack style works well on iPad, macOS, tvOS, and VisionOS.
     }
 }
