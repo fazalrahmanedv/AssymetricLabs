@@ -14,6 +14,8 @@ struct QuizView: View {
     @State private var bookmarkedQuestions = Set<Int>()
     @State private var isAnswerDisabled = false
     @State private var showTimeoutOverlay = false
+    @State private var answerSubmitted = false
+    @State private var isTimerActive = true
     @State var questions: [Quiz] = []  // Nonoptional array of Quiz
     let optionLabels = ["A", "B", "C", "D"]
     let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
@@ -44,6 +46,16 @@ struct QuizView: View {
                                   startPoint: startPoint,
                                   endPoint: endPoint)
         }
+    }
+    
+    // Computed solution message based on user selection.
+    var solutionMessage: String {
+        guard let selected = selectedAnswer,
+              let currentQuiz = questions[safe: questionIndex] else {
+            return ""
+        }
+        let correctness = (selected == Int(currentQuiz.correctOption)) ? "Correct!" : "Incorrect!"
+        return "\(correctness) \(currentQuiz.solution?.contentData ?? "No solution available.")"
     }
     
     var body: some View {
@@ -128,7 +140,7 @@ struct QuizView: View {
                     .animation(.easeInOut, value: questionIndex)
             }
             
-            // Answer buttons using the helper to display correct option texts.
+            // Answer buttons with option-click logic.
             VStack(spacing: 8) {
                 ForEach(0..<4, id: \.self) { index in
                     AnswerButton(
@@ -136,14 +148,23 @@ struct QuizView: View {
                         label: optionLabels[index],
                         answerText: optionText(for: index, quiz: questions[safe: questionIndex]),
                         selectedAnswer: $selectedAnswer,
-                        isDisabled: $isAnswerDisabled
+                        isDisabled: $isAnswerDisabled,
+                        answerSubmitted: answerSubmitted,
+                        correctOption: questions[safe: questionIndex].map { Int($0.correctOption) },
+                        onOptionSelected: { selected in
+                            answerSubmitted = true
+                            isAnswerDisabled = true
+                            isTimerActive = false  // Stop timer
+                        }
                     )
                 }
             }
             .padding(8)
             
-            // Display solution area.
-            solutionView(width: geometry.size.width * 0.95)
+            // Show solution only after an answer is submitted.
+            if answerSubmitted {
+                solutionView(width: geometry.size.width * 0.95)
+            }
         }
     }
     
@@ -196,9 +217,11 @@ struct QuizView: View {
             }
             .frame(width: geometry.size.width * 0.6)
             
-            // Show solution view on the side.
-            solutionView(width: geometry.size.width * 0.35)
-                .padding(8)
+            // Show solution on the side if an answer has been submitted.
+            if answerSubmitted {
+                solutionView(width: geometry.size.width * 0.35)
+                    .padding(8)
+            }
         }
     }
     
@@ -214,36 +237,22 @@ struct QuizView: View {
     
     @ViewBuilder
     private func landscapeOptionView(for index: Int, optionMinHeight: CGFloat) -> some View {
-        let circleColor: Color = selectedAnswer == index ? .blue : .gray
-        let optionBackground: Color = selectedAnswer == index ? Color.blue.opacity(0.8) : Color.gray.opacity(0.7)
-        let optionTextValue = optionText(for: index, quiz: questions[safe: questionIndex])
-        
-        Button(action: {
-            if !isAnswerDisabled {
-                selectedAnswer = index
-                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        // Use the same AnswerButton with the updated parameters.
+        AnswerButton(
+            index: index,
+            label: optionLabels[index],
+            answerText: optionText(for: index, quiz: questions[safe: questionIndex]),
+            selectedAnswer: $selectedAnswer,
+            isDisabled: $isAnswerDisabled,
+            answerSubmitted: answerSubmitted,
+            correctOption: questions[safe: questionIndex].map { Int($0.correctOption) },
+            onOptionSelected: { selected in
+                answerSubmitted = true
+                isAnswerDisabled = true
+                isTimerActive = false
             }
-        }) {
-            HStack {
-                Text(optionLabels[index])
-                    .font(.subheadline)
-                    .foregroundColor(.white)
-                    .frame(width: 30, height: 30)
-                    .background(Circle().fill(circleColor))
-                Text(optionTextValue)
-                    .font(.body)
-                    .foregroundColor(.white)
-                    .padding(.leading, 6)
-                Spacer()
-            }
-            .padding(.vertical, 4)
-            .padding(.horizontal, 8)
-            .frame(maxWidth: .infinity, minHeight: optionMinHeight)
-            .background(optionBackground)
-            .cornerRadius(8)
-        }
-        .disabled(isAnswerDisabled)
-        .animation(.easeInOut, value: selectedAnswer)
+        )
+        .frame(minHeight: optionMinHeight)
     }
     
     func solutionView(width: CGFloat) -> some View {
@@ -252,7 +261,7 @@ struct QuizView: View {
                 .font(.subheadline)
                 .padding(.horizontal, 8)
             ScrollView {
-                Text("Solution details will appear here in the future.")
+                Text(solutionMessage)
                     .padding(8)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -310,6 +319,8 @@ struct QuizView: View {
             selectedAnswer = nil
             timeRemaining = 60
             isAnswerDisabled = false
+            answerSubmitted = false
+            isTimerActive = true
             bookmarkedQuestions.removeAll()
         }) {
             Image(systemName: "arrow.counterclockwise.circle.fill")
@@ -326,6 +337,8 @@ struct QuizView: View {
                     selectedAnswer = nil
                     timeRemaining = 60
                     isAnswerDisabled = false
+                    answerSubmitted = false
+                    isTimerActive = true
                 }
             }) {
                 HStack {
@@ -355,21 +368,14 @@ struct QuizView: View {
             .frame(width: 40, height: 40)
             Spacer()
             Button(action: {
-                // Optionally check if the previous answer was correct.
-                if let selected = selectedAnswer,
-                   let currentQuiz = questions[safe: questionIndex] {
-                    if selected == Int(currentQuiz.correctOption) {
-                        print("Correct!")
-                    } else {
-                        print("Incorrect!")
-                    }
-                }
-                // Move to the next question.
+                // Move to the next question and reset state.
                 if questionIndex < questions.count - 1 {
                     questionIndex += 1
                     selectedAnswer = nil
                     timeRemaining = 60
                     isAnswerDisabled = false
+                    answerSubmitted = false
+                    isTimerActive = true
                 }
             }) {
                 HStack {
@@ -386,11 +392,13 @@ struct QuizView: View {
     // MARK: - Timer Update
     
     private func updateTime() {
+        guard isTimerActive else { return }
         if timeRemaining > 0 {
             timeRemaining -= 1
         } else if !showTimeoutOverlay {
             isAnswerDisabled = true
             showTimeoutOverlay = true
+            isTimerActive = false
         }
     }
 }
@@ -402,11 +410,34 @@ struct AnswerButton: View {
     let answerText: String
     @Binding var selectedAnswer: Int?
     @Binding var isDisabled: Bool
+    let answerSubmitted: Bool
+    let correctOption: Int?
+    let onOptionSelected: (Int) -> Void
     
     var body: some View {
-        Button(action: {
+        // Determine background color based on answer submission and correctness.
+        let backgroundColor: Color = {
+            if answerSubmitted {
+                if let correct = correctOption {
+                    if index == correct {
+                        return Color.green
+                    } else if selectedAnswer == index && index != correct {
+                        return Color.red
+                    } else {
+                        return Color.gray.opacity(0.7)
+                    }
+                } else {
+                    return Color.gray.opacity(0.7)
+                }
+            } else {
+                return (selectedAnswer == index ? Color.blue.opacity(0.8) : Color.gray.opacity(0.7))
+            }
+        }()
+        
+        return Button(action: {
             if !isDisabled {
                 selectedAnswer = index
+                onOptionSelected(index)
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             }
         }) {
@@ -415,7 +446,7 @@ struct AnswerButton: View {
                     .font(.subheadline)
                     .foregroundColor(.white)
                     .frame(width: 30, height: 30)
-                    .background(Circle().fill(selectedAnswer == index ? Color.blue : Color.gray))
+                    // Optionally, you can adjust the circle fill here as well.
                 Text(answerText)
                     .font(.body)
                     .foregroundColor(.white)
@@ -425,7 +456,7 @@ struct AnswerButton: View {
             .padding(.vertical, 4)
             .padding(.horizontal, 8)
             .frame(maxWidth: .infinity, minHeight: 40)
-            .background(selectedAnswer == index ? Color.blue.opacity(0.8) : Color.gray.opacity(0.7))
+            .background(backgroundColor)
             .cornerRadius(8)
         }
         .disabled(isDisabled)
@@ -488,4 +519,3 @@ struct CachedImageView: View {
         }
     }
 }
-
