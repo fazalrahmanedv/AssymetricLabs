@@ -2,6 +2,7 @@ import SwiftUI
 import Combine
 import QuizRepo
 import CoreML
+import CoreData
 class QuizViewModel: ObservableObject {
     @Published var currentIndex = 0
     @Published var maxIndexReached = 0  // Highest question index reached
@@ -17,10 +18,9 @@ class QuizViewModel: ObservableObject {
     var answeredOptions: [Int: Int] = [:]
     var remainingTimes: [Int: Int] = [:]
     var bookmarkStates: [Int: Bool] = [:]  // Persist bookmark state per question
-    
-    let quizList: [Quiz]
+    let coreDataStack = CoreDataStack.shared
+    @Published var quizList: [Quiz] = []
     let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
-    
     init(quizList: [Quiz]) {
             self.quizList = quizList
             // Initialize remaining time and bookmark state for every question.
@@ -48,7 +48,7 @@ class QuizViewModel: ObservableObject {
 
     var scorePercentage: Double {
         let totalQuestions = quizList.count
-        return totalQuestions > 0 ? (Double(totalCorrectAnswers) / Double(5)) * 100 : 0
+        return totalQuestions > 0 ? (Double(totalCorrectAnswers) / Double(totalQuestions)) * 100 : 0
     }
     var solutionMessage: String {
         guard let selected = selectedAnswer,
@@ -222,8 +222,11 @@ class QuizViewModel: ObservableObject {
     // MARK: - Bookmark Logic
     
     // Toggles bookmark only if the current question is unanswered.
-    func toggleBookmark() {
+    @MainActor func toggleBookmark() {
         // If the question has been answered, clear bookmark.
+        guard let question = currentQuestion else { return }
+        question.hasBookmarked.toggle()
+        coreDataStack.saveContext()
         if answeredOptions[currentIndex] != nil {
             bookmarkStates[currentIndex] = false
             bookmarkedQuestions.remove(currentIndex)
@@ -237,5 +240,10 @@ class QuizViewModel: ObservableObject {
                 bookmarkedQuestions.remove(currentIndex)
             }
         }
+    }
+    @MainActor
+    func fetchBookmarkedQuestions() async {
+        let predicate = NSPredicate(format: "hasBookmarked == %@", NSNumber(value: true))
+        self.quizList = await coreDataStack.fetchEntities(ofType: Quiz.self, predicate: predicate)
     }
 }

@@ -73,9 +73,15 @@ struct ContentView: View {
                         .onAppear {
                             animateQuizButton = true
                         }
-                        
+                        NavigationLink(
+                            destination: QuizView(quizList: [], isFromBookmarks: true),
+                            isActive: $navigateToBookmarkedQuiz
+                        ) {
+                            EmptyView()
+                        }
                         Button(action: {
                             navigateToBookmarkedQuiz = true
+                           
                         }) {
                             Text("Bookmarked")
                                 .frame(maxWidth: .infinity, minHeight: 30)
@@ -94,13 +100,6 @@ struct ContentView: View {
                 .onAppear {
                     viewModel.loadData()
                 }
-                NavigationLink(
-                    destination: QuizSummaryView(viewModel: QuizViewModel(quizList: [])),
-                    isActive: $navigateToBookmarkedQuiz
-                ) {
-                    EmptyView()
-                }
-                .hidden()
                 #if !os(tvOS)
                 .sheet(isPresented: .constant(!hasOnboarded)) {
                     OnboardingView(

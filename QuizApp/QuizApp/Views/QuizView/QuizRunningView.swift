@@ -9,9 +9,10 @@ struct QuizView: View {
     @State private var navigateToSummary = false
     @State private var showPositiveFeedback = false
     let optionLabels = ["A", "B", "C", "D"]
-
-    init(quizList: [Quiz]) {
+    var isFromBookmark = false
+    init(quizList: [Quiz], isFromBookmarks: Bool) {
         _viewModel = StateObject(wrappedValue: QuizViewModel(quizList: quizList))
+        self.isFromBookmark = isFromBookmarks
     }
 
     var body: some View {
@@ -77,7 +78,14 @@ struct QuizView: View {
             .ignoresSafeArea(edges: .bottom)
         }
         .onAppear {
-            viewModel.loadCurrentState()
+            if isFromBookmark{
+                Task{
+                    await viewModel.fetchBookmarkedQuestions()
+                    viewModel.loadCurrentState()
+                }
+            } else {
+                viewModel.loadCurrentState()
+            }
         }
         .onReceive(viewModel.timer) { _ in
             viewModel.updateTimer()

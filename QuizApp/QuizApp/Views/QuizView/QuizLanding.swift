@@ -55,7 +55,7 @@ struct QuizLandingPage: View {
                 VStack {
                     // NavigationLink to trigger when quiz data is ready.
                     NavigationLink(
-                        destination: QuizView(quizList: viewModel.quizList),
+                        destination: QuizView(quizList: viewModel.quizList, isFromBookmarks: false),
                         isActive: $isQuizActive
                     ) {
                         EmptyView()
