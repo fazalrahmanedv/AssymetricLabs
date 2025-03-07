@@ -7,8 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		845522512D6B8BBB002EAE00 /* QuizUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 845522502D6B8BBB002EAE00 /* QuizUI.framework */; };
-		845522552D6B8BBF002EAE00 /* QuizRepo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 845522542D6B8BBF002EAE00 /* QuizRepo.framework */; };
+		84B1971A2D78D324000AD0A5 /* QuizRepo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 845522542D6B8BBF002EAE00 /* QuizRepo.framework */; };
+		84B1971B2D78D324000AD0A5 /* QuizRepo.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 845522542D6B8BBF002EAE00 /* QuizRepo.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		84B1971D2D78D327000AD0A5 /* QuizUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 845522502D6B8BBB002EAE00 /* QuizUI.framework */; };
+		84B1971E2D78D327000AD0A5 /* QuizUI.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 845522502D6B8BBB002EAE00 /* QuizUI.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -27,6 +29,21 @@
 			remoteInfo = QuizApp;
 		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		84B1971C2D78D324000AD0A5 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				84B1971B2D78D324000AD0A5 /* QuizRepo.framework in Embed Frameworks */,
+				84B1971E2D78D327000AD0A5 /* QuizUI.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		845521962D6B8A1F002EAE00 /* QuizApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = QuizApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -65,8 +82,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				845522512D6B8BBB002EAE00 /* QuizUI.framework in Frameworks */,
-				845522552D6B8BBF002EAE00 /* QuizRepo.framework in Frameworks */,
+				84B1971A2D78D324000AD0A5 /* QuizRepo.framework in Frameworks */,
+				84B1971D2D78D327000AD0A5 /* QuizUI.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -133,6 +150,7 @@
 				845521922D6B8A1F002EAE00 /* Sources */,
 				845521932D6B8A1F002EAE00 /* Frameworks */,
 				845521942D6B8A1F002EAE00 /* Resources */,
+				84B1971C2D78D324000AD0A5 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);

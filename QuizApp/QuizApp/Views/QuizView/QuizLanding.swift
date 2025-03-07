@@ -1,17 +1,10 @@
-//
-//  QuizLandingPage.swift
-//
-
 import SwiftUI
-
 struct QuizLandingPage: View {
     @Environment(\.colorScheme) var colorScheme
     @StateObject private var viewModel = QuizListViewModel(
         fetchQuizUseCase: FetchQuizUseCaseImpl(repository: QuizAppRepositoryImpl())
     )
-    @State private var animatePulse = false
     @State private var isQuizActive = false
-    
     var backgroundGradient: LinearGradient {
         if colorScheme == .dark {
             return LinearGradient(
@@ -26,12 +19,12 @@ struct QuizLandingPage: View {
         } else {
             return LinearGradient(
                 gradient: Gradient(colors: [
-                    Color(red: 202/255, green: 208/255, blue: 255/255),
-                    Color(red: 224/255, green: 230/255, blue: 255/255),
-                    Color(red: 227/255, green: 227/255, blue: 227/255)
+                    Color(red: 232/255, green: 217/255, blue: 202/255),
+                    Color(red: 219/255, green: 206/255, blue: 192/255),
+                    Color(red: 211/255, green: 198/255, blue: 185/255)
                 ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
+                startPoint: .leading,
+                endPoint: .trailing
             )
         }
     }
@@ -40,34 +33,35 @@ struct QuizLandingPage: View {
         ZStack {
             backgroundGradient.ignoresSafeArea()
             VStack {
-                // Top information views.
+                // Top information views with a pulsing effect.
                 HStack(alignment: .top, spacing: 20) {
                     quizInfoView(title: "5 MCQs", subtitle: "Questions")
-                    quizInfoView(title: "Unlimited", subtitle: "Attempts")
+                    quizInfoView(title: "One", subtitle: "Attempt")
                     quizInfoView(title: "5 minutes", subtitle: "Total time")
                 }
                 Spacer()
-                // Encouraging message.
                 VStack {
                     Text("You have 5 minutes to complete this Quiz")
                         .font(.body)
                         .multilineTextAlignment(.center)
                         .padding(.top, 10)
+                        .transition(.slide)
                     Text("All the best")
                         .font(.body)
                         .multilineTextAlignment(.center)
+                        .transition(.slide)
                 }
                 Spacer()
                 VStack {
-                    // NavigationLink will trigger when isQuizActive is set to true.
+                    // NavigationLink to trigger when quiz data is ready.
                     NavigationLink(
-                        destination: QuizView(questions: viewModel.quizList),
+                        destination: QuizView(quizList: viewModel.quizList),
                         isActive: $isQuizActive
                     ) {
                         EmptyView()
                     }
                     
-                    // Conditional view: show loading indicator while fetching.
+                    // Show loading indicator or the Continue button.
                     if viewModel.isLoading {
                         ProgressView("Loading quizzes...")
                             .progressViewStyle(CircularProgressViewStyle(tint: .blue))
@@ -81,7 +75,7 @@ struct QuizLandingPage: View {
                                 Text("Continue")
                                 if #available(iOS 17.0, *) {
                                     Image(systemName: "arrow.right")
-                                        .symbolEffect(.pulse, options: .repeating, isActive: animatePulse)
+                                        .symbolEffect(.pulse, options: .repeating, isActive: true)
                                 } else {
                                     Image(systemName: "arrow.right")
                                 }
@@ -94,7 +88,6 @@ struct QuizLandingPage: View {
                             .cornerRadius(8)
                         }
                     }
-                    
                     Text("Tap continue when you are ready to take the quiz")
                         .font(.footnote)
                         .foregroundColor(.gray)
@@ -104,10 +97,6 @@ struct QuizLandingPage: View {
             .padding()
             .frame(maxHeight: .infinity)
         }
-        .onAppear {
-            animatePulse = true
-        }
-        // Observe when the view model signals that data is ready.
         .onChange(of: viewModel.shouldNavigate) { newValue in
             if newValue {
                 isQuizActive = true

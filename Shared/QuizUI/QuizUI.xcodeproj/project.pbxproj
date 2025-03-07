@@ -8,7 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		845522052D6B8B09002EAE00 /* QuizUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 845521FA2D6B8B09002EAE00 /* QuizUI.framework */; };
-		846608EF2D7788F400C2D40F /* QuizRepo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 846608EE2D7788F400C2D40F /* QuizRepo.framework */; };
+		84B1971F2D78D32D000AD0A5 /* QuizRepo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 846608EE2D7788F400C2D40F /* QuizRepo.framework */; };
+		84B197202D78D32D000AD0A5 /* QuizRepo.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 846608EE2D7788F400C2D40F /* QuizRepo.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -20,6 +21,20 @@
 			remoteInfo = QuizUI;
 		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		84B197212D78D32D000AD0A5 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				84B197202D78D32D000AD0A5 /* QuizRepo.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		845521FA2D6B8B09002EAE00 /* QuizUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = QuizUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -58,7 +73,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				846608EF2D7788F400C2D40F /* QuizRepo.framework in Frameworks */,
+				84B1971F2D78D32D000AD0A5 /* QuizRepo.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -121,6 +136,7 @@
 				845521F62D6B8B09002EAE00 /* Sources */,
 				845521F72D6B8B09002EAE00 /* Frameworks */,
 				845521F82D6B8B09002EAE00 /* Resources */,
+				84B197212D78D32D000AD0A5 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);

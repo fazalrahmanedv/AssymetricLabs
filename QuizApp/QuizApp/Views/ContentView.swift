@@ -7,9 +7,11 @@ struct ContentView: View {
         fetchCountriesUseCase: FetchCountriesUseCaseImpl(repository: QuizAppRepositoryImpl())
     )
     @State private var searchText = ""
-    @State private var selectedCountry: QuizRepo.Countries?
+    @State private var selectedCountry: Countries?
     @State private var showPicker = false
     @State private var navigateToQuiz = false
+    @State private var animateQuizButton = false
+    @State private var animateHeader = false
     @AppStorage("hasOnboarded") private var hasOnboarded: Bool = false
     @Environment(\.colorScheme) var colorScheme
 
@@ -27,12 +29,12 @@ struct ContentView: View {
         } else {
             return LinearGradient(
                 gradient: Gradient(colors: [
-                    Color(red: 202/255, green: 208/255, blue: 255/255),
-                    Color(red: 224/255, green: 230/255, blue: 255/255),
-                    Color(red: 227/255, green: 227/255, blue: 227/255)
+                    Color(red: 232/255, green: 217/255, blue: 202/255),
+                    Color(red: 219/255, green: 206/255, blue: 192/255),
+                    Color(red: 211/255, green: 198/255, blue: 185/255)
                 ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
+                startPoint: .leading,
+                endPoint: .trailing
             )
         }
     }
@@ -41,7 +43,12 @@ struct ContentView: View {
         NavigationView {
             ZStack {
                 backgroundGradient.ignoresSafeArea()
-                VStack {
+                VStack(spacing: 20) {
+                    // Animated Header to set a fun tone
+                    Text("Infinity Quiz")
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Choose your country:")
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -54,18 +61,24 @@ struct ContentView: View {
                             navigateToQuiz = true
                         }) {
                             Text("Start Quiz")
-                                .frame(maxWidth: .infinity)
+                                .frame(maxWidth: .infinity, minHeight: 30)
                                 .padding()
                                 .background(Color.blue)
                                 .foregroundColor(.white)
                                 .cornerRadius(10)
                         }
+                        // Pulsating animation for the quiz button
+                        .scaleEffect(animateQuizButton ? 1.05 : 1.0)
+                        .animation(Animation.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: animateQuizButton)
+                        .onAppear {
+                            animateQuizButton = true
+                        }
                         
                         Button(action: {
                             // Your action for Solve Bookmarks
                         }) {
-                            Text("Solve Bookmarks")
-                                .frame(maxWidth: .infinity)
+                            Text("Bookmarked")
+                                .frame(maxWidth: .infinity, minHeight: 30)
                                 .padding()
                                 .background(Color.green)
                                 .foregroundColor(.white)
@@ -137,6 +150,13 @@ struct ContentView: View {
                 }
             }
         }
-        .navigationViewStyle(StackNavigationViewStyle())  // Stack style works well on iPad, macOS, tvOS, and VisionOS.
+        .navigationViewStyle(StackNavigationViewStyle())
+    }
+}
+
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
+            .previewLayout(.sizeThatFits)
     }
 }

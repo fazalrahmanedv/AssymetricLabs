@@ -1,66 +1,44 @@
-//
-//  QuizListViewModel.swift
-//
-
+import SwiftUI
 import Combine
 import QuizRepo
-
+// MARK: - QuizListViewModel
 class QuizListViewModel: ObservableObject {
     @Published var quizList: [Quiz] = []
-    @Published var isLoading: Bool = false
+    @Published var isLoading = false
     @Published var errorMessage: String?
-    @Published var shouldNavigate: Bool = false
-    
+    @Published var shouldNavigate = false
     private let fetchQuizUseCase: FetchQuizUseCase
     private let minQuizCount = 5
     private var cancellables = Set<AnyCancellable>()
-
     init(fetchQuizUseCase: FetchQuizUseCase) {
         self.fetchQuizUseCase = fetchQuizUseCase
     }
-    
+    @MainActor
     func loadQuizList() {
         guard !isLoading else { return }
-        
         isLoading = true
         errorMessage = nil
         shouldNavigate = false
-        
         Task {
             do {
-                let quizzes = try await fetchQuizUseCase.execute()
-                await MainActor.run {
-                    self.validateAndPrepareQuizzes(quizzes)
+                // Directly fetch the quizzes; they are already validated.
+                let fetchedQuizzes = try await fetchQuizUseCase.execute()
+                quizList = fetchedQuizzes
+                // Optionally, ensure you have a minimum number of quizzes to proceed.
+                if quizList.count < minQuizCount {
+                    errorMessage = "Not enough quizzes available."
+                    shouldNavigate = false
+                } else {
+                    // Optionally, you could shuffle or trim the quizzes if needed.
+                    quizList = Array(quizList.shuffled().prefix(minQuizCount))
+                    shouldNavigate = true
                 }
             } catch {
-                await handleError(error)
+                handleError(error)
             }
-            await MainActor.run {
-                self.isLoading = false
-            }
+            isLoading = false
         }
     }
-    
-    @MainActor
-    private func validateAndPrepareQuizzes(_ quizzes: [Quiz]) {
-        let validQuizzes = quizzes.filter { quiz in
-            [quiz.question, quiz.option1, quiz.option2, quiz.option3, quiz.option4]
-                .allSatisfy { $0?.isEmpty == false }
-        }
-        
-        guard validQuizzes.count >= minQuizCount else {
-            errorMessage = validQuizzes.isEmpty ?
-                "No quizzes available" :
-                "Minimum \(minQuizCount) quizzes required (\(validQuizzes.count) available)"
-            quizList = []
-            return
-        }
-        
-        quizList = Array(validQuizzes.shuffled().prefix(minQuizCount))
-        shouldNavigate = true
-    }
-    
-    @MainActor
     private func handleError(_ error: Error) {
         errorMessage = error.localizedDescription
         quizList = []

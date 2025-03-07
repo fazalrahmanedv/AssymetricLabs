@@ -1,9 +1,9 @@
 import SwiftUI
 import QuizRepo
 public struct CountrySelectionButton: View {
-    @Binding public var selectedCountry: QuizRepo.Countries?
+    @Binding public var selectedCountry: Countries?
     @Binding public var showPicker: Bool
-    public init(selectedCountry: Binding<QuizRepo.Countries?>, showPicker: Binding<Bool>) {
+    public init(selectedCountry: Binding<Countries?>, showPicker: Binding<Bool>) {
         self._selectedCountry = selectedCountry
         self._showPicker = showPicker
     }

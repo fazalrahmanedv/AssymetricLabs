@@ -6,7 +6,7 @@ import Foundation
 import QuizRepo
 
 protocol FetchQuizUseCase {
-    func execute() async throws -> [QuizRepo.Quiz]
+    func execute() async throws -> [Quiz]
 }
 
 class FetchQuizUseCaseImpl: FetchQuizUseCase {
@@ -14,7 +14,7 @@ class FetchQuizUseCaseImpl: FetchQuizUseCase {
     init(repository: QuizAppRepository) {
         self.repository = repository
     }
-    func execute() async throws -> [QuizRepo.Quiz] {
+    func execute() async throws -> [Quiz] {
         return try await repository.fetchQuizList()
     }
 }

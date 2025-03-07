@@ -3,228 +3,225 @@ import Combine
 import QuizRepo
 import UIKit
 protocol QuizAppRepository {
-    func fetchAppsList() async throws -> [QuizRepo.Countries]
-    func fetchQuizList() async throws -> [QuizRepo.Quiz]
+    func fetchAppsList() async throws -> [Countries]
+    func fetchQuizList() async throws -> [Quiz]
 }
-
 class QuizAppRepositoryImpl: QuizAppRepository {
-    private let apiManager = ApiManager.shared
-    private let coreDataStack = CoreDataStack.shared
-    
-    func fetchAppsList() async throws -> [QuizRepo.Countries] {
-        let savedCountries = await fetchSavedCountries(context: coreDataStack.mainContext)
+    private let apiManager: ApiManager
+    private let coreDataStack: CoreDataStack
+    init(apiManager: ApiManager = .shared, coreDataStack: CoreDataStack = .shared) {
+        self.apiManager = apiManager
+        self.coreDataStack = coreDataStack
+    }
+    // MARK: - Fetch Countries List
+    func fetchAppsList() async throws -> [Countries] {
+        let savedCountries = await fetchSavedCountries()
         if !savedCountries.isEmpty {
-            print("✅ Returning countries from Core Data")
+            Logger.log("✅ Returning countries from Core Data")
             return savedCountries
         }
         let result: Result<[Country], ApiManager.ApiError> = await apiManager.request(endPoint: .countriesList(method: .get))
         switch result {
         case .success(let countryList):
-            await saveCountriesToCoreData(countryList, context: coreDataStack.mainContext)
-            let savedCountries = await fetchSavedCountries(context: coreDataStack.mainContext)
-            return savedCountries
+            try await saveCountriesToCoreData(countryList)
+            return await fetchSavedCountries()
         case .failure(let error):
             throw error
         }
     }
-    
-    func fetchQuizList() async throws -> [QuizRepo.Quiz] {
-        let savedQuizzes = await fetchSavedQuizzes(context: coreDataStack.mainContext)
+    // MARK: - Fetch Quiz List
+    func fetchQuizList() async throws -> [Quiz] {
+        // In offline mode, return the cached quizzes filtered for validity
+        let savedQuizzes = await fetchSavedQuizzes()
         if !apiManager.isNetworkReachable {
-            if !savedQuizzes.isEmpty {
-                print("✅ Returning quizzes from Core Data")
-                return savedQuizzes
-            } else {
-                return []
+            Logger.log("❌ No internet connection, returning cached quizzes")
+            return savedQuizzes.filter { quiz in
+                guard let question = quiz.question, !question.isEmpty,
+                      let option1 = quiz.option1, !option1.isEmpty,
+                      let option2 = quiz.option2, !option2.isEmpty,
+                      let option3 = quiz.option3, !option3.isEmpty,
+                      let option4 = quiz.option4, !option4.isEmpty,
+                      (quiz.correctOption >= 1 && quiz.correctOption <= 4),
+                      let solutionContent = quiz.solution?.contentData, !solutionContent.isEmpty
+                else { return false }
+                return true
             }
         }
         
         let result: Result<[QuizResponse], ApiManager.ApiError> = await apiManager.request(endPoint: .quizList(method: .get))
         switch result {
         case .success(let quizList):
-            // Save quizzes to Core Data
-            await self.saveQuizzesToCoreData(quizList, context: self.coreDataStack.mainContext)
-            // Fetch all quizzes
-            let allQuizzes = await fetchSavedQuizzes(context: self.coreDataStack.mainContext)
-            // Fetch quizzes with questiionType "image"
-            let imageQuizzes = await self.fetchImageQuizzes(context: self.coreDataStack.mainContext)
-            print("Fetched \(imageQuizzes.count) image quizzes")
+            try await saveQuizzesToCoreData(quizList)
+            let allQuizzes = await fetchSavedQuizzes()
+            let imageQuizzes = await fetchImageQuizzes()
+            let imageSolutions = await fetchImageSolutions()
+            Logger.log("✅ Fetched \(imageQuizzes.count) image quizzes and \(imageSolutions.count) image solutions")
             
-            // For each image quiz, download and cache its image concurrently
             await withTaskGroup(of: Void.self) { group in
                 for quiz in imageQuizzes {
                     group.addTask {
                         await self.downloadAndCacheImage(forQuiz: quiz)
                     }
                 }
+                for solution in imageSolutions {
+                    group.addTask {
+                        await self.downloadAndCacheImage(forSolution: solution)
+                    }
+                }
             }
             
-            return allQuizzes
+            // Filter all quizzes to include only those that meet our conditions
+            let validQuizzes = allQuizzes.filter { quiz in
+                guard let question = quiz.question, !question.isEmpty,
+                      let option1 = quiz.option1, !option1.isEmpty,
+                      let option2 = quiz.option2, !option2.isEmpty,
+                      let option3 = quiz.option3, !option3.isEmpty,
+                      let option4 = quiz.option4, !option4.isEmpty,
+                      (quiz.correctOption >= 1 && quiz.correctOption <= 4),
+                      let solutionContent = quiz.solution?.contentData, !solutionContent.isEmpty
+                else { return false }
+                return true
+            }
+            
+            Logger.log("✅ Returning \(validQuizzes.count) valid quizzes")
+            return validQuizzes
+            
         case .failure(let error):
             throw error
         }
     }
-    
     // MARK: - Core Data Saving / Fetching
-    
-    private func saveCountriesToCoreData(_ countries: [Country], context: NSManagedObjectContext) async {
-        await context.perform {
-            for country in countries {
-                _ = QuizRepo.Countries.from(country, context: context)
-            }
-            do {
-                try context.save()
-                print("✅ Countries saved to Core Data")
-            } catch {
-                print("❌ Failed to save countries: \(error)")
-            }
+    @MainActor
+    private func saveCountriesToCoreData(_ countries: [Country]) async throws {
+        for country in countries {
+            _ = Countries.from(country, context: coreDataStack.mainContext)
         }
+        try coreDataStack.mainContext.save()
+        Logger.log("✅ Countries saved to Core Data")
     }
-    
-    private func saveQuizzesToCoreData(_ quizzes: [QuizResponse], context: NSManagedObjectContext) async {
-        await self.coreDataStack.deleteAllData(for: Quiz.self)
-        await context.perform {
-            for quiz in quizzes {
-                _ = QuizRepo.Quiz.from(quiz, context: context)
-            }
-            do {
-                try context.save()
-                print("✅ Quizzes saved to Core Data")
-            } catch {
-                print("❌ Failed to save quizzes: \(error)")
-            }
+    @MainActor
+    private func saveQuizzesToCoreData(_ quizzes: [QuizResponse]) async throws {
+        await coreDataStack.deleteAllData(for: Quiz.self)
+        await coreDataStack.deleteAllData(for: QuizSolution.self)
+        for quiz in quizzes {
+            _ = Quiz.from(quiz, context: coreDataStack.mainContext)
         }
+        try coreDataStack.mainContext.save()
+        Logger.log("✅ Quizzes saved to Core Data")
     }
-    
-    private func fetchSavedCountries(context: NSManagedObjectContext) -> [QuizRepo.Countries] {
-        let request: NSFetchRequest<QuizRepo.Countries> = QuizRepo.Countries.fetchRequest()
-        let sortDescriptor = NSSortDescriptor(key: "name", ascending: true)
-        request.sortDescriptors = [sortDescriptor]
-        do {
-            return try context.fetch(request)
-        } catch {
-            print("❌ Failed to fetch countries: \(error)")
-            return []
-        }
+    private func fetchSavedCountries() async -> [Countries] {
+        return await coreDataStack.fetchEntities(ofType: Countries.self, sortDescriptors: [NSSortDescriptor(key: "name", ascending: true)])
     }
-    
-    private func fetchSavedQuizzes(context: NSManagedObjectContext) -> [QuizRepo.Quiz] {
-        let request: NSFetchRequest<QuizRepo.Quiz> = QuizRepo.Quiz.fetchRequest()
-        do {
-            return try context.fetch(request)
-        } catch {
-            print("❌ Failed to fetch quizzes: \(error)")
-            return []
-        }
+    private func fetchSavedQuizzes() async -> [Quiz] {
+        return await coreDataStack.fetchEntities(ofType: Quiz.self, fetchLimit: 20)
     }
-    
-    private func fetchImageQuizzes(context: NSManagedObjectContext) async -> [QuizRepo.Quiz] {
-        await withCheckedContinuation { continuation in
-            context.perform {
-                let request: NSFetchRequest<QuizRepo.Quiz> = QuizRepo.Quiz.fetchRequest()
-                request.predicate = NSPredicate(format: "questiionType == %@", "image")
-                do {
-                    let imageQuizzes = try context.fetch(request)
-                    print("✅ Fetched \(imageQuizzes.count) image quizzes")
-                    continuation.resume(returning: imageQuizzes)
-                } catch {
-                    print("❌ Failed to fetch image quizzes: \(error)")
-                    continuation.resume(returning: [])
-                }
-            }
-        }
+    private func fetchImageQuizzes() async -> [Quiz] {
+        let predicate = NSPredicate(format: "questiionType == %@", "image")
+        return await coreDataStack.fetchEntities(ofType: Quiz.self, predicate: predicate )
     }
-    
+    private func fetchImageSolutions() async -> [QuizSolution] {
+        let predicate = NSPredicate(format: "contentType == %@", "image")
+        return await coreDataStack.fetchEntities(ofType: QuizSolution.self, predicate: predicate)
+    }
     // MARK: - Downloading and Caching Images
-    
-    private func downloadAndCacheImage(forQuiz quiz: QuizRepo.Quiz) async {
-        guard let urlString = quiz.question, let url = URL(string: urlString) else {
-            print("Invalid URL for quiz \(quiz)")
-            return
+    private func downloadAndCacheImage(from url: URL) async throws -> UIImage {
+        let request = URLRequest(url: url)
+        if let cachedResponse = URLCache.shared.cachedResponse(for: request),
+           let image = UIImage(data: cachedResponse.data) {
+            return image
         }
-        // Check if image is already cached
-        if let _ = ImageCache.shared.image(forKey: urlString) {
-            return
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let image = UIImage(data: data) else {
+            throw URLError(.badServerResponse)
         }
+        let cachedData = CachedURLResponse(response: response, data: data)
+        URLCache.shared.storeCachedResponse(cachedData, for: request)
+        return image
+    }
+    private func downloadAndCacheImage(forQuiz quiz: Quiz) async {
+        guard let urlString = quiz.question, let url = URL(string: urlString) else { return }
         do {
-            let (data, _) = try await URLSession.shared.data(from: url)
-            if let image = UIImage(data: data) {
-                // Cache in memory
-                ImageCache.shared.setImage(image, forKey: urlString)
-                // Save to disk
-                saveImageToDisk(image, withFilename: url.lastPathComponent)
-                print("Downloaded and cached image for quiz \(quiz)")
-            }
+            let image = try await downloadAndCacheImage(from: url)
+            ImageCache.shared.setImage(image, forKey: urlString)
         } catch {
-            print("❌ Failed to download image for quiz \(quiz): \(error)")
+            Logger.log("❌ Failed to download image for quiz: \(error)")
         }
     }
-    
-    private func saveImageToDisk(_ image: UIImage, withFilename filename: String) {
-        guard let data = image.jpegData(compressionQuality: 1.0) else { return }
-        let fileManager = FileManager.default
+    private func downloadAndCacheImage(forSolution solution: QuizSolution) async {
+        guard let urlString = solution.contentData, let url = URL(string: urlString) else { return }
         do {
-            let cachesDirectory = try fileManager.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
-            let fileURL = cachesDirectory.appendingPathComponent(filename)
-            try data.write(to: fileURL)
-            print("Saved image to disk: \(fileURL.path)")
+            let image = try await downloadAndCacheImage(from: url)
+            ImageCache.shared.setImage(image, forKey: urlString)
         } catch {
-            print("❌ Error saving image to disk: \(error)")
+            Logger.log("❌ Failed to download image for solution: \(error)")
         }
+    }
+    private func fetchValidQuizzes() async -> [Quiz] {
+        let predicates: [NSPredicate] = [
+            // Question should not be nil or empty
+            NSPredicate(format: "question != nil AND question != ''"),
+            // All 4 options must be provided and nonempty
+            NSPredicate(format: "option1 != nil AND option1 != ''"),
+            NSPredicate(format: "option2 != nil AND option2 != ''"),
+            NSPredicate(format: "option3 != nil AND option3 != ''"),
+            NSPredicate(format: "option4 != nil AND option4 != ''"),
+            // Correct option should be between 1 and 4
+            NSPredicate(format: "correctOption >= %d AND correctOption <= %d", 1, 4),
+            // The related solution's contentData should not be nil or empty
+            NSPredicate(format: "solution.contentData != nil AND solution.contentData != ''")
+        ]
+        let compoundPredicate = NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
+        return await coreDataStack.fetchEntities(ofType: Quiz.self, predicate: compoundPredicate)
     }
 }
-
-// MARK: - Simple In-Memory Image Cache
-
-class ImageCache {
+// MARK: - Image Cache
+public final class ImageCache {
     static let shared = ImageCache()
-    private init() {}
-    
     private let cache = NSCache<NSString, UIImage>()
-    
-    func image(forKey key: String) -> UIImage? {
-        return cache.object(forKey: NSString(string: key))
+    private init() {
+        cache.countLimit = 100
+        cache.totalCostLimit = 50 * 1024 * 1024
     }
-    
+    func image(forKey key: String) -> UIImage? {
+        return cache.object(forKey: key as NSString)
+    }
     func setImage(_ image: UIImage, forKey key: String) {
-        cache.setObject(image, forKey: NSString(string: key))
+        cache.setObject(image, forKey: key as NSString, cost: image.pngData()?.count ?? 0)
     }
 }
-
 // MARK: - Core Data Model Extensions
-
-extension QuizRepo.Quiz {
-    static func from(_ quiz: QuizResponse, context: NSManagedObjectContext) -> QuizRepo.Quiz {
-        let entity = QuizRepo.Quiz(context: context)
-        entity.uuidIdentifier  = UUID(uuidString: quiz.uuidIdentifier ?? "")
+extension Quiz {
+    static func from(_ quiz: QuizResponse, context: NSManagedObjectContext) -> Quiz {
+        let entity = Quiz(context: context)
+        entity.uuidIdentifier = UUID(uuidString: quiz.uuidIdentifier ?? "")
         entity.correctOption = Int16(quiz.correctOption ?? 0)
-        entity.option1  = quiz.option1
+        entity.option1 = quiz.option1
         entity.option2 = quiz.option2
-        entity.option3  = quiz.option3
-        entity.option4  = quiz.option4
+        entity.option3 = quiz.option3
+        entity.option4 = quiz.option4
         entity.question = quiz.question
         entity.questiionType = quiz.questionType?.rawValue ?? "text"
-        let solution = QuizRepo.QuizSolution(context: context)
+        let solution = QuizSolution(context: context)
         solution.contentData = quiz.solution?.first?.contentData
-        solution.contentType = quiz.solution?.first?.contentType?.rawValue ?? "text"
-        solution.isDownloaded = false
+        solution.contentType = quiz.solution?.first?.contentType?.rawValue
         solution.ofQuiz = entity
-        entity.solution =  solution
-        entity.sort  =   Int16(quiz.sort ?? 0)
-        entity.hasSkipped   = false
-        entity.hasAnswered = false
-        entity.hasBookmarked = false
-        entity.selectedOption = 0
+        entity.solution = solution
         return entity
     }
 }
-
-extension QuizRepo.Countries {
-    static func from(_ country: Country, context: NSManagedObjectContext) -> QuizRepo.Countries {
-        let entity = QuizRepo.Countries(context: context)
+extension Countries {
+    static func from(_ country: Country, context: NSManagedObjectContext) -> Countries {
+        let entity = Countries(context: context)
         entity.id = country.id
         entity.name = country.name.common
         entity.flag = country.flag
         return entity
+    }
+}
+
+// MARK: - Logger Utility
+struct Logger {
+    static func log(_ message: String) {
+        print(message) // Replace with file logging if needed
     }
 }

@@ -1,8 +1,8 @@
 import CoreData
 public class CoreDataStack {
-    // MARK: - Singleton instance
+    // Singleton instance
     public static let shared = CoreDataStack()
-    // MARK: - NSPersistentContainer
+    // NSPersistentContainer
     public let persistentContainer: NSPersistentContainer
     private init() {
         persistentContainer = NSPersistentContainer(name: "QuizApp")
@@ -23,7 +23,7 @@ public class CoreDataStack {
     public var mainContext: NSManagedObjectContext {
         persistentContainer.viewContext
     }
-    // ✅ Reuse a single background context to avoid memory issues
+    // Reuse a single background context to avoid memory issues
     private lazy var backgroundContext: NSManagedObjectContext = {
         let context = persistentContainer.newBackgroundContext()
         context.automaticallyMergesChangesFromParent = true
@@ -40,6 +40,7 @@ public class CoreDataStack {
             print("❌ Failed to save main context: \(error.localizedDescription)")
         }
     }
+    // MARK: - Delete All Data
     public func deleteAllData<T: NSManagedObject>(for entityType: T.Type) async {
         await backgroundContext.perform { [weak self] in
             guard let self = self else { return }
@@ -51,6 +52,35 @@ public class CoreDataStack {
                 print("✅ Successfully deleted all data for \(String(describing: entityType)) in background")
             } catch {
                 print("❌ Failed to delete all data for \(String(describing: entityType)): \(error.localizedDescription)")
+            }
+        }
+    }
+    // MARK: - Generic Fetch Function
+    public func fetchEntities<T: NSManagedObject>(
+        ofType entityType: T.Type,
+        predicate: NSPredicate? = nil,
+        sortDescriptors: [NSSortDescriptor]? = nil,
+        fetchLimit: Int? = nil,
+        fetchOffset: Int? = nil,
+        context: NSManagedObjectContext? = nil
+    ) async -> [T] {
+        let context = context ?? backgroundContext
+        return await context.perform {
+            let fetchRequest = NSFetchRequest<T>(entityName: String(describing: entityType))
+            fetchRequest.predicate = predicate
+            fetchRequest.sortDescriptors = sortDescriptors
+            if let fetchLimit = fetchLimit {
+                fetchRequest.fetchLimit = fetchLimit
+            }
+            if let fetchOffset = fetchOffset {
+                fetchRequest.fetchOffset = fetchOffset
+            }
+            do {
+                let results = try context.fetch(fetchRequest)
+                return results
+            } catch {
+                print("❌ Failed to fetch \(String(describing: entityType)): \(error.localizedDescription)")
+                return []
             }
         }
     }

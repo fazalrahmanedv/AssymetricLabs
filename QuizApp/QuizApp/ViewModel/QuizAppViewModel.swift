@@ -1,6 +1,6 @@
 import QuizRepo
 class CountriesViewModel: ObservableObject {
-    @Published var countryList: [QuizRepo.Countries] = []
+    @Published var countryList: [Countries] = []
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
     private let fetchCountriesUseCase: FetchCountriesUseCase

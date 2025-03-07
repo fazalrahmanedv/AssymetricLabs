@@ -2,15 +2,15 @@ import SwiftUI
 import QuizRepo
 import CoreData
 public struct CountryPickerView: View {
-    public let countries: [QuizRepo.Countries]
+    public let countries: [Countries]
     @Binding public var searchText: String
-    @Binding public var selectedCountry: QuizRepo.Countries?
+    @Binding public var selectedCountry: Countries?
     @Binding public var showPicker: Bool
     @Environment(\.dismiss) private var dismiss
     public init(
-        countries: [QuizRepo.Countries],
+        countries: [Countries],
         searchText: Binding<String>,
-        selectedCountry: Binding<QuizRepo.Countries?>,
+        selectedCountry: Binding<Countries?>,
         showPicker: Binding<Bool>
     ) {
         self.countries = countries
@@ -18,7 +18,7 @@ public struct CountryPickerView: View {
         self._selectedCountry = selectedCountry
         self._showPicker = showPicker
     }
-    private var filteredCountries: [QuizRepo.Countries] {
+    private var filteredCountries: [Countries] {
         if searchText.isEmpty {
             return countries
         } else {
