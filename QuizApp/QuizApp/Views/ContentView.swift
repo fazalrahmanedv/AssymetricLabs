@@ -48,7 +48,7 @@ struct ContentView: View {
                     Text("Infinity Quiz")
                         .font(.largeTitle)
                         .fontWeight(.bold)
-                        .foregroundColor(.white)
+                        .padding(.top, 20)
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Choose your country:")
                             .frame(maxWidth: .infinity, alignment: .leading)

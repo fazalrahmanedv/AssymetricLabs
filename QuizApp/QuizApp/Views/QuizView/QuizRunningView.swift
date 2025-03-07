@@ -64,7 +64,7 @@ struct QuizView: View {
                     )
                     .background(Color(.systemBackground))
                 }
-                .frame(height: 60)
+                .frame(height: 100)
                 .frame(maxWidth: .infinity)
             }
             .overlay(
