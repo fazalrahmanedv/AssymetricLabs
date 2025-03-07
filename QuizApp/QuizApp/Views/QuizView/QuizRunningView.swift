@@ -23,7 +23,6 @@ struct QuizView: View {
                         totalQuestions: viewModel.quizList.count
                     )
                     .padding(.top)
-                    
                     ScrollView {
                         VStack(spacing: 12) {
                             if geometry.size.width > geometry.size.height {
@@ -237,6 +236,7 @@ struct LandscapeLayout: View {
                                     .padding(8)
                                     .transition(.slide)
                                     .animation(.easeInOut, value: viewModel.currentIndex)
+                                    .layoutPriority(1) // <-- Ensures proper resizing
                             } else if question.questiionType == "image" {
                                 if let urlString = question.question {
                                     if ImageCache.shared.image(forKey: urlString) != nil {
@@ -269,25 +269,23 @@ struct LandscapeLayout: View {
                     .padding(.bottom, 40)
                 }
             }
-            .frame(width: geometry.size.width * 0.6)
+            .frame(width: geometry.size.width * 0.6) // <-- Adjust width properly
             
             if viewModel.answerSubmitted {
                 SolutionView(
                     solution: viewModel.currentQuestion?.solution,
-                    width: geometry.size.width * 0.95
+                    width: geometry.size.width * 0.4 // <-- Adjust width so it doesn't push out
                 )
+                .frame(maxHeight: geometry.size.height * 0.9) // <-- Prevents UI breaking
             }
         }
     }
 }
-
-// MARK: - Landscape Answer Options View
 struct LandscapeAnswerOptionsView: View {
     @ObservedObject var viewModel: QuizViewModel
     var geometry: GeometryProxy
     let optionLabels: [String]
     @Binding var showPositiveFeedback: Bool
-
     func optionText(for index: Int) -> String {
         guard let quiz = viewModel.currentQuestion else { return "" }
         switch index {
@@ -300,8 +298,7 @@ struct LandscapeAnswerOptionsView: View {
     }
 
     var body: some View {
-        let optionMinHeight = max(40, geometry.size.height * 0.1)
-        return VStack(spacing: 8) {
+        VStack(spacing: 8) {
             ForEach(0..<4, id: \.self) { index in
                 AnswerButton(
                     index: index,
@@ -324,7 +321,7 @@ struct LandscapeAnswerOptionsView: View {
                         }
                     }
                 )
-                .frame(minHeight: optionMinHeight)
+                .frame(maxWidth: .infinity, minHeight: 50) // <-- Ensures proper layout
             }
         }
         .padding(.horizontal, 8)

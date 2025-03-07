@@ -12,6 +12,7 @@ class QuizViewModel: ObservableObject {
     @Published var isTimerActive = true
     @Published var bookmarkedQuestions = Set<Int>()
     private let durationEstimator = QuestionDurationEstimator()
+    @Published var scrollResetID = UUID() // Unique ID to reset scroll position
     // Dictionaries to persist state for each question
     var answeredOptions: [Int: Int] = [:]
     var remainingTimes: [Int: Int] = [:]
@@ -36,11 +37,19 @@ class QuizViewModel: ObservableObject {
             }
         }
         
-    
     var currentQuestion: Quiz? {
         quizList.indices.contains(currentIndex) ? quizList[currentIndex] : nil
     }
-    
+    var totalCorrectAnswers: Int {
+        answeredOptions.filter { index, selectedAnswer in
+            selectedAnswer == Int(quizList[index].correctOption)
+        }.count
+    }
+
+    var scorePercentage: Double {
+        let totalQuestions = quizList.count
+        return totalQuestions > 0 ? (Double(totalCorrectAnswers) / Double(5)) * 100 : 0
+    }
     var solutionMessage: String {
         guard let selected = selectedAnswer,
               let question = currentQuestion else { return "" }
@@ -139,6 +148,7 @@ class QuizViewModel: ObservableObject {
     
     /// Advances to the next question and marks the current answer as submitted.
     func nextQuestion() {
+        scrollResetID = UUID()
         // Pause timer before navigating away.
         pauseTimerForCurrentQuestion()
         
@@ -163,6 +173,7 @@ class QuizViewModel: ObservableObject {
     }
     
     func previousQuestion() {
+        scrollResetID = UUID()
         // Pause timer before navigating away.
         pauseTimerForCurrentQuestion()
         

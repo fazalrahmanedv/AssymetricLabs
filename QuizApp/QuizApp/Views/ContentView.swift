@@ -10,11 +10,11 @@ struct ContentView: View {
     @State private var selectedCountry: Countries?
     @State private var showPicker = false
     @State private var navigateToQuiz = false
+    @State private var navigateToBookmarkedQuiz = false
     @State private var animateQuizButton = false
     @State private var animateHeader = false
     @AppStorage("hasOnboarded") private var hasOnboarded: Bool = false
     @Environment(\.colorScheme) var colorScheme
-
     var backgroundGradient: LinearGradient {
         if colorScheme == .dark {
             return LinearGradient(
@@ -75,7 +75,7 @@ struct ContentView: View {
                         }
                         
                         Button(action: {
-                            // Your action for Solve Bookmarks
+                            navigateToBookmarkedQuiz = true
                         }) {
                             Text("Bookmarked")
                                 .frame(maxWidth: .infinity, minHeight: 30)
@@ -94,6 +94,13 @@ struct ContentView: View {
                 .onAppear {
                     viewModel.loadData()
                 }
+                NavigationLink(
+                    destination: QuizSummaryView(viewModel: QuizViewModel(quizList: [])),
+                    isActive: $navigateToBookmarkedQuiz
+                ) {
+                    EmptyView()
+                }
+                .hidden()
                 #if !os(tvOS)
                 .sheet(isPresented: .constant(!hasOnboarded)) {
                     OnboardingView(

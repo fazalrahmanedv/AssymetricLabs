@@ -37,7 +37,7 @@ struct QuizLandingPage: View {
                 HStack(alignment: .top, spacing: 20) {
                     quizInfoView(title: "5 MCQs", subtitle: "Questions")
                     quizInfoView(title: "One", subtitle: "Attempt")
-                    quizInfoView(title: "5 minutes", subtitle: "Total time")
+                    quizInfoView(title: "AI Based", subtitle: "Total time")
                 }
                 Spacer()
                 VStack {

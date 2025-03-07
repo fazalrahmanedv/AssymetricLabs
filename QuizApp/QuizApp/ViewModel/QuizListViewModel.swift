@@ -9,6 +9,7 @@ class QuizListViewModel: ObservableObject {
     @Published var shouldNavigate = false
     private let fetchQuizUseCase: FetchQuizUseCase
     private let minQuizCount = 5
+    private let quizStorageKey = "SavedQuizzes"
     private var cancellables = Set<AnyCancellable>()
     init(fetchQuizUseCase: FetchQuizUseCase) {
         self.fetchQuizUseCase = fetchQuizUseCase
