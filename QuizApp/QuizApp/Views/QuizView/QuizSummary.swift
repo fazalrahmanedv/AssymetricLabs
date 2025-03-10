@@ -1,5 +1,5 @@
 import SwiftUI
-import QuizRepo
+import Lottie
 
 struct QuizSummaryView: View {
     @Environment(\.dismiss) var dismiss
@@ -7,115 +7,114 @@ struct QuizSummaryView: View {
     
     var answeredCount: Int { viewModel.answeredOptions.count }
     var totalQuestions: Int { viewModel.quizList.count }
-    var scorePercentage: Double {
-        viewModel.scorePercentage
-    }
+    var scorePercentage: Double { viewModel.scorePercentage }
     
     var body: some View {
-        GeometryReader { geometry in
-            let isLandscape = geometry.size.width > geometry.size.height
-            
-            Group {
-                if isLandscape {
-                    HStack(spacing: 16) {
-                        scoreHeader()
-                            .frame(width: geometry.size.width * 0.4)
-                        
-                        quizList()
-                            .frame(width: geometry.size.width * 0.6)
-                    }
-                    .padding()
-                } else {
-                    VStack(spacing: 16) {
-                        scoreHeader()
-                        quizList()
-                    }
-                    .padding()
-                }
+        ScrollView {
+            VStack(spacing: 16) {
+                
+                // ✅ Score Header with Dynamic Animation
+                scoreHeader()
+                    .padding(.horizontal)
+                
+                // ✅ Quiz List Section
+                quizList()
+                    .padding(.horizontal)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .navigationTitle("Quiz Summary")
+            .padding(.top)
+            .background(Color(.systemGroupedBackground))
         }
+        .navigationTitle("Quiz Summary")
     }
     
-    // Gamified Score Header
+    // ✅ Score Header
     private func scoreHeader() -> some View {
-           VStack(spacing: 8) {
-               Text("Quiz Completed!")
-                   .font(.largeTitle)
-                   .fontWeight(.bold)
-                   .foregroundColor(.white)
-               
-               Text("Score: \(viewModel.totalCorrectAnswers * 100)")
-                   .font(.title2)
-                   .foregroundColor(.white)
-               
-               Text(String(format: "%.0f%%", scorePercentage))
-                   .font(.system(size: 48, weight: .heavy, design: .rounded))
-                   .foregroundColor(.yellow)
-               
-               Button(action: shareScore) {
-                   HStack {
-                       Image(systemName: "square.and.arrow.up")
-                           .font(.title2)
-                       Text("Share your score")
-                           .font(.headline)
-                   }
-                   .foregroundColor(.white)
-                   .padding(.top, 8)
-               }
-           }
-           .padding()
-           .frame(maxWidth: .infinity)
-           .background(
-               LinearGradient(
-                   gradient: Gradient(colors: [.blue, .purple]),
-                   startPoint: .leading,
-                   endPoint: .trailing
-               )
-           )
-           .cornerRadius(12)
-       }
-    
-    // Quiz Summary List
-    private func quizList() -> some View {
-        List {
-            Section("You can answer any bookmarked or unanswered question here.", content: {
-                ForEach(0..<totalQuestions, id: \.self) { index in
-                    Button(action: {
-                        viewModel.currentIndex = index
-                        viewModel.loadCurrentState()
-                        dismiss()
-                    }) {
-                        HStack {
-                            Image(systemName: icon(for: index))
-                                .foregroundColor(iconColor(for: index))
-                                .font(.title2)
-                            
-                            VStack(alignment: .leading) {
-                                Text("Question \(index + 1)")
-                                    .font(.headline)
-                                
-                                Text(status(for: index))
-                                    .font(.subheadline)
-                                    .foregroundColor(color(for: index))
-                            }
-                            
-                            Spacer()
-                            
-                            Text("Time: \(viewModel.remainingTimes[index] ?? 60)s")
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                        }
-                        .padding(.vertical, 8)
-                    }
-                    .buttonStyle(PlainButtonStyle())
+        VStack(spacing: 12) {
+            
+            // ✅ Title
+            Text("Quiz Completed!")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+            
+            // ✅ Score Text
+            Text("Score: \(viewModel.totalCorrectAnswers * 100)")
+                .font(.title2)
+                .foregroundColor(.white)
+            
+            // ✅ Percentage
+            Text(String(format: "%.0f%%", scorePercentage))
+                .font(.system(size: 48, weight: .heavy, design: .rounded))
+                .foregroundColor(scoreColor())
+            
+            // ✅ Celebration Animation if Score >= 80%
+            if scorePercentage >= 80 {
+                LottieCelebrationView(animationName: "Confetti")
+                    .frame(width: 180, height: 180)
+                    .padding(.top, -20)
+            }
+            
+            // ✅ Share Score Button
+            Button(action: shareScore) {
+                HStack {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.title2)
+                    Text("Share your score")
+                        .font(.headline)
                 }
-            })
+                .foregroundColor(.white)
+                .padding(.top, 8)
+            }
         }
-        .listStyle(InsetGroupedListStyle())
+        .padding()
+        .frame(maxWidth: .infinity)
+        .background(scoreBackground())
+        .cornerRadius(12)
+        .shadow(radius: 10)
     }
     
+    // ✅ Quiz Summary List
+    private func quizList() -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Review your questions")
+                .font(.headline)
+                .padding(.bottom, 8)
+            
+            ForEach(0..<totalQuestions, id: \.self) { index in
+                Button(action: {
+                    viewModel.currentIndex = index
+                    viewModel.loadCurrentState()
+                    dismiss()
+                }) {
+                    HStack {
+                        Image(systemName: icon(for: index))
+                            .foregroundColor(iconColor(for: index))
+                            .font(.title2)
+                        
+                        VStack(alignment: .leading) {
+                            Text("Question \(index + 1)")
+                                .font(.headline)
+                            
+                            Text(status(for: index))
+                                .font(.subheadline)
+                                .foregroundColor(color(for: index))
+                        }
+                        
+                        Spacer()
+                        Text("Remining time: \(viewModel.remainingTimes[index] ?? 60)s")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                    .padding()
+                    .cornerRadius(12)
+                    .shadow(color: .black.opacity(0.1), radius: 5)
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+        }
+    }
+    
+    // ✅ Status for each question
     private func status(for index: Int) -> String {
         if viewModel.answeredOptions[index] != nil {
             return "Answered"
@@ -126,16 +125,7 @@ struct QuizSummaryView: View {
         }
     }
     
-    private func color(for index: Int) -> Color {
-        if viewModel.answeredOptions[index] != nil {
-            return .green
-        } else if viewModel.bookmarkStates[index] == true {
-            return .yellow
-        } else {
-            return .red
-        }
-    }
-    
+    // ✅ Icon for each question
     private func icon(for index: Int) -> String {
         if viewModel.answeredOptions[index] != nil {
             return "checkmark.seal.fill"
@@ -146,6 +136,7 @@ struct QuizSummaryView: View {
         }
     }
     
+    // ✅ Icon Color
     private func iconColor(for index: Int) -> Color {
         if viewModel.answeredOptions[index] != nil {
             return .green
@@ -155,12 +146,67 @@ struct QuizSummaryView: View {
             return .red
         }
     }
+    
+    // ✅ Text Color
+    private func color(for index: Int) -> Color {
+        if viewModel.answeredOptions[index] != nil {
+            return .green
+        } else if viewModel.bookmarkStates[index] == true {
+            return .yellow
+        } else {
+            return .red
+        }
+    }
+    
+    // ✅ Share Button Action
     private func shareScore() {
         let scoreText = "I scored \(viewModel.totalCorrectAnswers * 100) points in the quiz! 🏆 Can you beat my score?"
         let activityController = UIActivityViewController(activityItems: [scoreText], applicationActivities: nil)
         if let topController = UIApplication.shared.windows.first?.rootViewController {
-               topController.present(activityController, animated: true, completion: nil)
+            topController.present(activityController, animated: true, completion: nil)
+        }
+    }
+    
+    // ✅ Background Color Based on Score
+    private func scoreBackground() -> LinearGradient {
+        if scorePercentage >= 80 {
+            return LinearGradient(colors: [.green, .blue], startPoint: .leading, endPoint: .trailing)
+        } else if scorePercentage >= 50 {
+            return LinearGradient(colors: [.orange, .yellow], startPoint: .leading, endPoint: .trailing)
+        } else {
+            return LinearGradient(colors: [.red, .purple], startPoint: .leading, endPoint: .trailing)
+        }
+    }
+    
+    // ✅ Score Text Color
+    private func scoreColor() -> Color {
+        if scorePercentage >= 80 {
+            return .green
+        } else if scorePercentage >= 50 {
+            return .yellow
+        } else {
+            return .red
         }
     }
 }
-
+struct LottieCelebrationView: UIViewRepresentable {
+    var animationName: String
+    func makeUIView(context: Context) -> some UIView {
+        let view = UIView()
+        let animationView = LottieAnimationView(name: animationName)
+        animationView.loopMode = .loop
+        animationView.contentMode = .scaleAspectFit
+        animationView.play()
+        
+        view.addSubview(animationView)
+        animationView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            animationView.heightAnchor.constraint(equalTo: view.heightAnchor),
+            animationView.widthAnchor.constraint(equalTo: view.widthAnchor)
+        ])
+        
+        return view
+    }
+    
+    func updateUIView(_ uiView: UIViewType, context: Context) {}
+}

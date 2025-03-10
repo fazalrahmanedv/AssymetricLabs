@@ -3,7 +3,7 @@ import Combine
 import QuizRepo
 import UIKit
 protocol QuizAppRepository {
-    func fetchAppsList() async throws -> [Countries]
+    func fetchCountryList() async throws -> [Countries]
     func fetchQuizList() async throws -> [Quiz]
 }
 class QuizAppRepositoryImpl: QuizAppRepository {
@@ -14,7 +14,7 @@ class QuizAppRepositoryImpl: QuizAppRepository {
         self.coreDataStack = coreDataStack
     }
     // MARK: - Fetch Countries List
-    func fetchAppsList() async throws -> [Countries] {
+    func fetchCountryList() async throws -> [Countries] {
         let savedCountries = await fetchSavedCountries()
         if !savedCountries.isEmpty {
             Logger.log("✅ Returning countries from Core Data")
@@ -35,17 +35,7 @@ class QuizAppRepositoryImpl: QuizAppRepository {
         let savedQuizzes = await fetchSavedQuizzes()
         if !apiManager.isNetworkReachable {
             Logger.log("❌ No internet connection, returning cached quizzes")
-            return savedQuizzes.filter { quiz in
-                guard let question = quiz.question, !question.isEmpty,
-                      let option1 = quiz.option1, !option1.isEmpty,
-                      let option2 = quiz.option2, !option2.isEmpty,
-                      let option3 = quiz.option3, !option3.isEmpty,
-                      let option4 = quiz.option4, !option4.isEmpty,
-                      (quiz.correctOption >= 1 && quiz.correctOption <= 4),
-                      let solutionContent = quiz.solution?.contentData, !solutionContent.isEmpty
-                else { return false }
-                return true
-            }
+            return await fetchValidQuizzes()
         }
         
         let result: Result<[QuizResponse], ApiManager.ApiError> = await apiManager.request(endPoint: .quizList(method: .get))
@@ -69,22 +59,7 @@ class QuizAppRepositoryImpl: QuizAppRepository {
                     }
                 }
             }
-            
-            // Filter all quizzes to include only those that meet our conditions
-            let validQuizzes = allQuizzes.filter { quiz in
-                guard let question = quiz.question, !question.isEmpty,
-                      let option1 = quiz.option1, !option1.isEmpty,
-                      let option2 = quiz.option2, !option2.isEmpty,
-                      let option3 = quiz.option3, !option3.isEmpty,
-                      let option4 = quiz.option4, !option4.isEmpty,
-                      (quiz.correctOption >= 1 && quiz.correctOption <= 4),
-                      let solutionContent = quiz.solution?.contentData, !solutionContent.isEmpty
-                else { return false }
-                return true
-            }
-            
-            Logger.log("✅ Returning \(validQuizzes.count) valid quizzes")
-            return validQuizzes
+            return  await fetchValidQuizzes()
             
         case .failure(let error):
             throw error

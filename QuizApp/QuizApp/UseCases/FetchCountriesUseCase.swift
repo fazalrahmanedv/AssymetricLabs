@@ -9,7 +9,7 @@ class FetchCountriesUseCaseImpl: FetchCountriesUseCase {
         self.repository = repository
     }
     func execute() async throws -> [Countries] {
-        let countries = try await repository.fetchAppsList()
+        let countries = try await repository.fetchCountryList()
         return countries
     }
 }
