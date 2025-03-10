@@ -1,10 +1,13 @@
 import SwiftUI
+
 struct QuizLandingPage: View {
     @Environment(\.colorScheme) var colorScheme
     @StateObject private var viewModel = QuizListViewModel(
         fetchQuizUseCase: FetchQuizUseCaseImpl(repository: QuizAppRepositoryImpl())
     )
     @State private var isQuizActive = false
+    @State private var countdown = 0
+    
     var backgroundGradient: LinearGradient {
         if colorScheme == .dark {
             return LinearGradient(
@@ -32,14 +35,16 @@ struct QuizLandingPage: View {
     var body: some View {
         ZStack {
             backgroundGradient.ignoresSafeArea()
+            
             VStack {
-                // Top information views with a pulsing effect.
                 HStack(alignment: .top, spacing: 20) {
                     quizInfoView(title: "5 MCQs", subtitle: "Questions")
                     quizInfoView(title: "One", subtitle: "Attempt")
                     quizInfoView(title: "AI Based", subtitle: "Total time")
                 }
+                
                 Spacer()
+                
                 VStack {
                     Text("You have 5 minutes to complete this Quiz")
                         .font(.body)
@@ -51,17 +56,15 @@ struct QuizLandingPage: View {
                         .multilineTextAlignment(.center)
                         .transition(.slide)
                 }
+                
                 Spacer()
+                
                 VStack {
-                    // NavigationLink to trigger when quiz data is ready.
                     NavigationLink(
                         destination: QuizView(quizList: viewModel.quizList, isFromBookmarks: false),
                         isActive: $isQuizActive
-                    ) {
-                        EmptyView()
-                    }
+                    ) { EmptyView() }
                     
-                    // Show loading indicator or the Continue button.
                     if viewModel.isLoading {
                         ProgressView("Loading quizzes...")
                             .progressViewStyle(CircularProgressViewStyle(tint: .blue))
@@ -88,6 +91,7 @@ struct QuizLandingPage: View {
                             .cornerRadius(8)
                         }
                     }
+                    
                     Text("Tap continue when you are ready to take the quiz")
                         .font(.footnote)
                         .foregroundColor(.gray)
@@ -96,11 +100,39 @@ struct QuizLandingPage: View {
             }
             .padding()
             .frame(maxHeight: .infinity)
+            
+            if countdown > 0 {
+                Color.black.opacity(0.4)
+                    .ignoresSafeArea()
+                Text("\(countdown)")
+                    .font(.system(size: 100, weight: .bold))
+                    .foregroundColor(.white)
+                    .transition(.scale)
+                    .id("Countdown-\(countdown)")
+                    .animation(.spring(), value: countdown)
+            }
         }
         .onChange(of: viewModel.shouldNavigate) { newValue in
             if newValue {
-                isQuizActive = true
+                startCountdown()
             }
+        }
+    }
+    
+    private func startCountdown() {
+        countdown = 3
+        Task { @MainActor in
+            for _ in 1...3 {
+                if #available(iOS 16.0, *) {
+                    try await Task.sleep(for: .seconds(1))
+                } else {
+                    // Fallback on earlier versions
+                }
+                withAnimation(.spring()) {
+                    countdown -= 1
+                }
+            }
+            isQuizActive = true
         }
     }
     
