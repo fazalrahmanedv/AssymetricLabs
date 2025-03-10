@@ -1,4 +1,5 @@
 import SwiftUI
+import AVFoundation
 
 struct QuizLandingPage: View {
     @Environment(\.colorScheme) var colorScheme
@@ -7,7 +8,8 @@ struct QuizLandingPage: View {
     )
     @State private var isQuizActive = false
     @State private var countdown = 0
-    
+    @State private var audioPlayer: AVAudioPlayer?
+
     var backgroundGradient: LinearGradient {
         if colorScheme == .dark {
             return LinearGradient(
@@ -31,7 +33,7 @@ struct QuizLandingPage: View {
             )
         }
     }
-    
+
     var body: some View {
         ZStack {
             backgroundGradient.ignoresSafeArea()
@@ -117,16 +119,21 @@ struct QuizLandingPage: View {
                 startCountdown()
             }
         }
+        .onDisappear {
+            audioPlayer?.stop() // Stop audio if view disappears
+        }
     }
-    
+
+    // MARK: - Countdown Logic
     private func startCountdown() {
         countdown = 3
+        playSound() // Play 3-second audio once
         Task { @MainActor in
             for _ in 1...3 {
                 if #available(iOS 16.0, *) {
                     try await Task.sleep(for: .seconds(1))
                 } else {
-                    // Fallback on earlier versions
+                    isQuizActive = true
                 }
                 withAnimation(.spring()) {
                     countdown -= 1
@@ -135,7 +142,23 @@ struct QuizLandingPage: View {
             isQuizActive = true
         }
     }
-    
+
+    // MARK: - Audio Playback
+    private func playSound() {
+        guard let url = Bundle.main.url(forResource: "321", withExtension: "wav") else {
+            print("Countdown audio file not found")
+            return
+        }
+        
+        do {
+            audioPlayer = try AVAudioPlayer(contentsOf: url)
+            audioPlayer?.play()
+        } catch {
+            print("Error playing countdown audio: \(error)")
+        }
+    }
+
+    // MARK: - Helper View
     @ViewBuilder
     func quizInfoView(title: String, subtitle: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {

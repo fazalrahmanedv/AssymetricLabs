@@ -1,7 +1,7 @@
 import SwiftUI
 import QuizRepo
 import WebKit
-
+import AVFoundation
 // MARK: - Main Quiz View
 struct QuizView: View {
     @Environment(\.colorScheme) var colorScheme
@@ -179,8 +179,9 @@ struct PortraitLayout: View {
                         correctOption: viewModel.currentQuestion.map { Int($0.correctOption) },
                         onOptionSelected: { selected in
                             viewModel.selectAnswer(selected)
-                            if let correct = viewModel.currentQuestion.map({ Int($0.correctOption) }),
-                               selected == correct {
+                            let isCorrect = viewModel.currentQuestion.map({ Int($0.correctOption) }) == selected
+                            AudioPlayer.shared.playSound(forCorrectAnswer: isCorrect)
+                            if isCorrect {
                                 showPositiveFeedback = true
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                                     withAnimation {
@@ -189,6 +190,7 @@ struct PortraitLayout: View {
                                 }
                             }
                         }
+
                     )
                 }
             }

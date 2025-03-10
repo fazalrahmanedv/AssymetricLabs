@@ -31,8 +31,6 @@ class QuizAppRepositoryImpl: QuizAppRepository {
     }
     // MARK: - Fetch Quiz List
     func fetchQuizList() async throws -> [Quiz] {
-        // In offline mode, return the cached quizzes filtered for validity
-        let savedQuizzes = await fetchSavedQuizzes()
         if !apiManager.isNetworkReachable {
             Logger.log("❌ No internet connection, returning cached quizzes")
             return await fetchValidQuizzes()

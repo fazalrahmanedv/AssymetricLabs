@@ -22,16 +22,13 @@ class QuizListViewModel: ObservableObject {
         shouldNavigate = false
         Task {
             do {
-                // Directly fetch the quizzes; they are already validated.
                 let fetchedQuizzes = try await fetchQuizUseCase.execute()
-                quizList = fetchedQuizzes
-                // Optionally, ensure you have a minimum number of quizzes to proceed.
-                if quizList.count < minQuizCount {
+                if fetchedQuizzes.count < minQuizCount {
                     errorMessage = "Not enough quizzes available."
                     shouldNavigate = false
                 } else {
                     // Optionally, you could shuffle or trim the quizzes if needed.
-                    quizList = Array(quizList.shuffled().prefix(minQuizCount))
+                    quizList = Array(fetchedQuizzes.shuffled().prefix(minQuizCount))
                     shouldNavigate = true
                 }
             } catch {

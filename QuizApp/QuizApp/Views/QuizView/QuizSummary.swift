@@ -1,14 +1,12 @@
 import SwiftUI
 import Lottie
-
+import AVFoundation
 struct QuizSummaryView: View {
     @Environment(\.dismiss) var dismiss
     @ObservedObject var viewModel: QuizViewModel
-    
     var answeredCount: Int { viewModel.answeredOptions.count }
     var totalQuestions: Int { viewModel.quizList.count }
     var scorePercentage: Double { viewModel.scorePercentage }
-    
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
@@ -25,8 +23,17 @@ struct QuizSummaryView: View {
             .background(Color(.systemGroupedBackground))
         }
         .navigationTitle("Quiz Summary")
+        .onAppear(){
+            playSound()
+        }
     }
-    
+    func playSound() {
+        if scorePercentage >= 60 {
+            AudioPlayer.shared.playSound(forWon: true)
+        } else {
+            AudioPlayer.shared.playSound(forWon: false)
+        }
+    }
     // ✅ Score Header
     private func scoreHeader() -> some View {
         VStack(spacing: 12) {
