@@ -24,7 +24,7 @@ public class CoreDataStack {
         persistentContainer.viewContext
     }
     // Reuse a single background context to avoid memory issues
-    private lazy var backgroundContext: NSManagedObjectContext = {
+     public lazy var backgroundContext: NSManagedObjectContext = {
         let context = persistentContainer.newBackgroundContext()
         context.automaticallyMergesChangesFromParent = true
         context.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy

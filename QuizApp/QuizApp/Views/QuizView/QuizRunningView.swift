@@ -87,6 +87,9 @@ struct QuizView: View {
                 viewModel.loadCurrentState()
             }
         }
+        .onDisappear {
+            AudioPlayer.shared.stopAllSounds()
+        }
         .onReceive(viewModel.timer) { _ in
             viewModel.updateTimer()
         }
@@ -188,6 +191,8 @@ struct PortraitLayout: View {
                                         showPositiveFeedback = false
                                     }
                                 }
+                            } else {
+                                
                             }
                         }
 

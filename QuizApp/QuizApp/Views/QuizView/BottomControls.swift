@@ -1,11 +1,11 @@
 import SwiftUI
-
+import AVFoundation
 struct TimerView: View {
     let timeRemaining: Int
     let totalDuration: Int
-
     var body: some View {
         ZStack {
+            
             Circle()
                 .stroke(Color.gray.opacity(0.3), lineWidth: 6)
             Circle()
@@ -21,6 +21,11 @@ struct TimerView: View {
                 .foregroundColor(.primary)
         }
         .frame(width: 40, height: 40)
+        .onChange(of: timeRemaining) { newValue in
+            if newValue == 1 {
+                AudioPlayer.shared.playTimeout()
+            }
+        }
     }
 }
 struct BottomControls: View {
@@ -39,10 +44,7 @@ struct BottomControls: View {
                 }
             }
             .disabled(viewModel.currentIndex == 0)
-            
             Spacer()
-            
-            // Use the predictedTotalDuration from the view model (or a constant)
             TimerView(timeRemaining: viewModel.timeRemaining,
                       totalDuration: viewModel.predictedTotalDuration)
             

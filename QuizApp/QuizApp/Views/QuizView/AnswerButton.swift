@@ -10,11 +10,12 @@ struct AnswerButton: View {
     let correctOption: Int?
     let onOptionSelected: (Int) -> Void
     
+    @State private var shakeOffset: CGFloat = 0 // Shake animation offset
+
     var body: some View {
         // Determine background color based on selection and correctness.
         let backgroundColor: Color = {
             if answerSubmitted {
-                // When submitted, highlight correct answer in green.
                 if let correct = correctOption {
                     if index == correct {
                         return Color.green
@@ -27,19 +28,27 @@ struct AnswerButton: View {
                     return Color.gray.opacity(0.7)
                 }
             } else {
-                // Before submission, show the selected option in blue.
                 return selectedAnswer == index ? Color.blue.opacity(0.8) : Color.gray.opacity(0.7)
             }
         }()
         
         return Button(action: {
             if !isDisabled {
-                // When tapped, notify the view model.
                 onOptionSelected(index)
-                // Trigger haptic feedback.
+                
                 if let correct = correctOption {
                     let feedbackGenerator = UINotificationFeedbackGenerator()
                     feedbackGenerator.notificationOccurred(index == correct ? .success : .error)
+                    
+                    // Trigger shaking if the answer is wrong
+                    if index != correct {
+                        withAnimation(Animation.default.repeatCount(4, autoreverses: true)) {
+                            shakeOffset = 2
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            shakeOffset = 0
+                        }
+                    }
                 }
             }
         }) {
@@ -59,55 +68,9 @@ struct AnswerButton: View {
             .frame(maxWidth: .infinity, minHeight: 40)
             .background(backgroundColor)
             .cornerRadius(8)
+            .offset(x: shakeOffset) // Apply shaking effect
         }
         .disabled(isDisabled)
         .animation(.easeInOut, value: selectedAnswer)
-    }
-}
-
-struct AnswerButton_Previews: PreviewProvider {
-    static var previews: some View {
-        Group {
-            // Default state: not selected, not submitted.
-            AnswerButton(
-                index: 0,
-                label: "A",
-                answerText: "Option A",
-                selectedAnswer: .constant(nil),
-                isDisabled: .constant(false),
-                answerSubmitted: false,
-                correctOption: 1,
-                onOptionSelected: { _ in }
-            )
-            .previewDisplayName("Default State")
-            
-            // Submitted and correct answer.
-            AnswerButton(
-                index: 1,
-                label: "B",
-                answerText: "Option B",
-                selectedAnswer: .constant(1),
-                isDisabled: .constant(true),
-                answerSubmitted: true,
-                correctOption: 1,
-                onOptionSelected: { _ in }
-            )
-            .previewDisplayName("Submitted & Correct")
-            
-            // Submitted with an incorrect answer.
-            AnswerButton(
-                index: 0,
-                label: "A",
-                answerText: "Option A",
-                selectedAnswer: .constant(0),
-                isDisabled: .constant(true),
-                answerSubmitted: true,
-                correctOption: 1,
-                onOptionSelected: { _ in }
-            )
-            .previewDisplayName("Submitted & Incorrect")
-        }
-        .previewLayout(.sizeThatFits)
-        .padding()
     }
 }
