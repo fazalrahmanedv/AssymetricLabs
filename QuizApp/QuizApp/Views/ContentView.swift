@@ -1,6 +1,68 @@
 import SwiftUI
 import QuizRepo
 import QuizUI
+struct StreakView: View {
+    var streak: Int = 3
+    var body: some View {
+        HStack {
+            Image(systemName: "flame.fill")
+                .foregroundColor(.red)
+            Text("Streak: \(streak) day\(streak == 1 ? "" : "s")")
+                .font(.subheadline)
+                .foregroundColor(.primary)
+            Spacer()
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.primary.opacity(0.1))
+        )
+        .padding(.horizontal)
+    }
+}
+struct Achievement: Identifiable {
+    let id = UUID()
+    let name: String
+    let iconName: String
+}
+
+struct AchievementsBanner: View {
+    let achievements: [Achievement] = [
+        Achievement(name: "Speedster", iconName: "bolt.fill"),
+        Achievement(name: "Perfectionist", iconName: "checkmark.seal.fill"),
+        Achievement(name: "Marathoner", iconName: "figure.walk"),
+        Achievement(name: "Streak Master", iconName: "flame.fill")
+    ]
+    
+    var body: some View {
+        VStack(alignment: .leading) {
+            Text("Achievements")
+                .font(.headline)
+                .padding(.horizontal)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 16) {
+                    ForEach(achievements) { achievement in
+                        VStack {
+                            Image(systemName: achievement.iconName)
+                                .font(.largeTitle)
+                                .padding()
+                                .background(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(Color.blue.opacity(0.2))
+                                )
+                            Text(achievement.name)
+                                .font(.caption)
+                                .multilineTextAlignment(.center)
+                                .frame(maxWidth: 80)
+                        }
+                    }
+                }
+                .padding(.horizontal)
+            }
+        }
+    }
+}
+
 
 struct ContentView: View {
     @StateObject private var viewModel = CountriesViewModel(
@@ -10,11 +72,11 @@ struct ContentView: View {
     @State private var selectedCountry: Countries?
     @State private var showPicker = false
     @State private var navigateToQuiz = false
-    @State private var navigateToBookmarkedQuiz = false
     @State private var animateQuizButton = false
-    @State private var animateHeader = false
     @AppStorage("hasOnboarded") private var hasOnboarded: Bool = false
     @Environment(\.colorScheme) var colorScheme
+    
+    // Static background gradient based on the current color scheme.
     var backgroundGradient: LinearGradient {
         if colorScheme == .dark {
             return LinearGradient(
@@ -38,109 +100,104 @@ struct ContentView: View {
             )
         }
     }
-
+    
     var body: some View {
         NavigationView {
             ZStack {
-                backgroundGradient.ignoresSafeArea()
-                VStack(spacing: 20) {
-                    // Animated Header to set a fun tone
-                    Text("Infinity Quiz")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                        .padding(.top, 20)
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Choose your country:")
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        CountrySelectionButton(selectedCountry: $selectedCountry, showPicker: $showPicker)
-                    }
-                    .padding()
-                    
-                    HStack(spacing: 20) {
-                        Button(action: {
-                            navigateToQuiz = true
-                        }) {
-                            Text("Start Quiz")
-                                .frame(maxWidth: .infinity, minHeight: 30)
+                backgroundGradient
+                    .edgesIgnoringSafeArea(.all)
+                ScrollView {
+                    VStack(spacing: 20) {
+                        StreakView()
+                        AchievementsBanner()
+                        
+                        // Header section for country selection.
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Choose your country:")
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .font(.headline)
+                            CountrySelectionButton(selectedCountry: $selectedCountry, showPicker: $showPicker)
+                        }
+                        .padding()
+                        Spacer()
+                        VStack(spacing: 20) {
+                            Button(action: {
+                                navigateToQuiz = true
+                            }) {
+                                HStack {
+                                    Text("🧠")
+                                        .font(.system(size: 24))
+                                    Text("Start Quiz")
+                                        .font(.system(size: 24, weight: .bold))
+                                        .gradientForeground(colors: [Color.blue, Color.purple])
+                                }
                                 .padding()
-                                .background(Color.blue)
-                                .foregroundColor(.white)
-                                .cornerRadius(10)
-                        }
-                        // Pulsating animation for the quiz button
-                        .scaleEffect(animateQuizButton ? 1.05 : 1.0)
-                        .animation(Animation.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: animateQuizButton)
-                        .onAppear {
-                            animateQuizButton = true
-                        }
-                        NavigationLink(
-                            destination: QuizView(quizList: [], isFromBookmarks: true),
-                            isActive: $navigateToBookmarkedQuiz
-                        ) {
-                            EmptyView()
-                        }
-                        Button(action: {
-                            navigateToBookmarkedQuiz = true
-                           
-                        }) {
-                            Text("Bookmarked")
-                                .frame(maxWidth: .infinity, minHeight: 30)
+                                .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            .padding()
+                            Button(action: {
+                                // Action for solving bookmarks
+                            }) {
+                                Label {
+                                    Text("Solve Bookmarks")
+                                        .font(.system(size: 24, weight: .bold))
+                                } icon: {
+                                    Image(systemName: "bookmark.fill")
+                                        .font(.system(size: 24))
+                                }
                                 .padding()
-                                .background(Color.green)
-                                .foregroundColor(.white)
-                                .cornerRadius(10)
+                                .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            .padding(20)
                         }
                     }
-                    .padding(20)
+                    .padding(.horizontal, 20)
+                    .onAppear {
+                        viewModel.loadData()
+                    }
+                    .sheet(isPresented: .constant(!hasOnboarded)) {
+                        OnboardingView(
+                            title: "Welcome to Infinity Quiz",
+                            rows: [
+                                OnboardingRow(
+                                    image: Image(systemName: "questionmark.circle"),
+                                    title: "Challenge Your Knowledge",
+                                    description: "Test your brain with a range of trivia questions."
+                                ),
+                                OnboardingRow(
+                                    image: Image(systemName: "lightbulb.fill"),
+                                    title: "Discover New Facts",
+                                    description: "Learn interesting trivia with every quiz."
+                                ),
+                                OnboardingRow(
+                                    image: Image(systemName: "gamecontroller.fill"),
+                                    title: "Fun & Engaging",
+                                    description: "Enjoy quick, entertaining quizzes."
+                                )
+                            ],
+                            actionTitle: "Get Started",
+                            action: { hasOnboarded = true }
+                        )
+                    }
+                    // Country Picker sheet.
+                    .sheet(isPresented: $showPicker) {
+                        CountryPickerView(
+                            countries: viewModel.countryList,
+                            searchText: $searchText,
+                            selectedCountry: $selectedCountry,
+                            showPicker: $showPicker
+                        )
+                    }
+                    // Hidden navigation link to the QuizLandingPage.
+                    NavigationLink(destination: QuizLandingPage(), isActive: $navigateToQuiz) {
+                        EmptyView()
+                    }
+                    .hidden()
                 }
-                .background(.ultraThinMaterial)
-                .cornerRadius(10)
-                .shadow(radius: 5)
-                .padding(.horizontal, 20)
-                .onAppear {
-                    viewModel.loadData()
-                }
-                #if !os(tvOS)
-                .sheet(isPresented: .constant(!hasOnboarded)) {
-                    OnboardingView(
-                        title: "Welcome to Infinity Quiz",
-                        rows: [
-                            OnboardingRow(
-                                image: Image(systemName: "questionmark.circle"),
-                                title: "Challenge Your Knowledge",
-                                description: "Test your brain with a range of trivia questions."
-                            ),
-                            OnboardingRow(
-                                image: Image(systemName: "lightbulb.fill"),
-                                title: "Discover New Facts",
-                                description: "Learn interesting trivia with every quiz."
-                            ),
-                            OnboardingRow(
-                                image: Image(systemName: "gamecontroller.fill"),
-                                title: "Fun & Engaging",
-                                description: "Enjoy quick, entertaining quizzes."
-                            )
-                        ],
-                        actionTitle: "Get Started",
-                        action: { hasOnboarded = true }
-                    )
-                }
-                .sheet(isPresented: $showPicker) {
-                    CountryPickerView(
-                        countries: viewModel.countryList,
-                        searchText: $searchText,
-                        selectedCountry: $selectedCountry,
-                        showPicker: $showPicker
-                    )
-                }
-                #endif
-                
-                NavigationLink(destination: QuizLandingPage(), isActive: $navigateToQuiz) {
-                    EmptyView()
-                }
-                .hidden()
+                .navigationTitle("Infinity Quiz") // Apply navigationTitle here
             }
-            .navigationTitle("Home")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     if let country = selectedCountry {
@@ -164,5 +221,29 @@ struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
             .previewLayout(.sizeThatFits)
+    }
+}
+extension View {
+    func gradientText(colors: [Color]) -> some View {
+        self.overlay(
+            LinearGradient(
+                colors: colors,
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+        )
+        .mask(self)
+    }
+}
+extension View {
+    func gradientForeground(colors: [Color]) -> some View {
+        self.overlay(
+            LinearGradient(
+                colors: colors,
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+        )
+        .mask(self)
     }
 }
