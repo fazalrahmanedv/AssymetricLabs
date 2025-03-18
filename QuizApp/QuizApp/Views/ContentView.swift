@@ -3,13 +3,17 @@ import QuizRepo
 import QuizUI
 struct StreakView: View {
     var streak: Int = 3
+    
     var body: some View {
         HStack {
             Image(systemName: "flame.fill")
                 .foregroundColor(.red)
+                .accessibilityHidden(true)
             Text("Streak: \(streak) day\(streak == 1 ? "" : "s")")
                 .font(.subheadline)
                 .foregroundColor(.primary)
+                .accessibilityLabel("\(streak) day streak")
+            
             Spacer()
         }
         .padding()
@@ -18,6 +22,7 @@ struct StreakView: View {
                 .fill(Color.primary.opacity(0.1))
         )
         .padding(.horizontal)
+        .accessibilityElement(children: .combine)
     }
 }
 struct Achievement: Identifiable {
@@ -25,7 +30,6 @@ struct Achievement: Identifiable {
     let name: String
     let iconName: String
 }
-
 struct AchievementsBanner: View {
     let achievements: [Achievement] = [
         Achievement(name: "Speedster", iconName: "bolt.fill"),
@@ -39,6 +43,7 @@ struct AchievementsBanner: View {
             Text("Achievements")
                 .font(.headline)
                 .padding(.horizontal)
+            
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 16) {
                     ForEach(achievements) { achievement in
@@ -50,20 +55,23 @@ struct AchievementsBanner: View {
                                     RoundedRectangle(cornerRadius: 10)
                                         .fill(Color.blue.opacity(0.2))
                                 )
+                                .accessibilityHidden(true)
+                            
                             Text(achievement.name)
                                 .font(.caption)
                                 .multilineTextAlignment(.center)
                                 .frame(maxWidth: 80)
                         }
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("\(achievement.name) achievement")
                     }
                 }
                 .padding(.horizontal)
             }
         }
+        .accessibilityElement(children: .contain)
     }
 }
-
-
 struct ContentView: View {
     @StateObject private var viewModel = CountriesViewModel(
         fetchCountriesUseCase: FetchCountriesUseCaseImpl(repository: QuizAppRepositoryImpl())
@@ -72,6 +80,7 @@ struct ContentView: View {
     @State private var selectedCountry: Countries?
     @State private var showPicker = false
     @State private var navigateToQuiz = false
+    @State private var navigateToBookmarkedQuiz = false
     @State private var animateQuizButton = false
     @AppStorage("hasOnboarded") private var hasOnboarded: Bool = false
     @Environment(\.colorScheme) var colorScheme
@@ -127,28 +136,48 @@ struct ContentView: View {
                                 HStack {
                                     Text("🧠")
                                         .font(.system(size: 24))
+                                        .accessibilityHidden(true) // Avoid redundant VoiceOver description
+                                    
                                     Text("Start Quiz")
                                         .font(.system(size: 24, weight: .bold))
                                         .gradientForeground(colors: [Color.blue, Color.purple])
+                                        .dynamicTypeSize(.large ... .xxLarge) // Supports text scaling
                                 }
                                 .padding()
-                                .frame(maxWidth: .infinity)
+                                .frame(maxWidth: .infinity, minHeight: 50) // Ensures a tap area of at least 44x44 pt
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(Color.primary.opacity(0.1)) // Improves contrast
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .stroke(
+                                                    LinearGradient(colors: [.white, .gray, .white], startPoint: .leading, endPoint: .trailing),
+                                                    lineWidth: 2
+                                                )
+                                        )
+                                        .shadow(color: .white.opacity(0.8), radius: 5, x: 0, y: 0)
+                                )
                             }
+                            .accessibilityLabel("Start Quiz")
+                            .accessibilityHint("Opens a new quiz session")
                             .buttonStyle(PlainButtonStyle())
                             .padding()
-                            Button(action: {
-                                // Action for solving bookmarks
-                            }) {
-                                Label {
-                                    Text("Solve Bookmarks")
-                                        .font(.system(size: 24, weight: .bold))
-                                } icon: {
-                                    Image(systemName: "bookmark.fill")
-                                        .font(.system(size: 24))
-                                }
-                                .padding()
-                                .frame(maxWidth: .infinity)
+                            NavigationLink(
+                                destination: QuizView(quizList: [], isFromBookmarks: true),
+                                isActive: $navigateToBookmarkedQuiz
+                            ) {
+                                EmptyView()
                             }
+                            Button(action: {
+                                navigateToBookmarkedQuiz = true
+                            }) {
+                                Label("Solve Bookmarks", systemImage: "bookmark.fill")
+                                    .font(.system(size: 24, weight: .bold))
+                                    .padding()
+                                    .frame(maxWidth: .infinity, minHeight: 44)
+                            }
+                            .accessibilityLabel("Solve bookmarked quizzes")
+                            .accessibilityHint("Opens a list of bookmarked questions for review")
                             .buttonStyle(PlainButtonStyle())
                             .padding(20)
                         }
