@@ -55,7 +55,6 @@ public class CoreDataStack {
             }
         }
     }
-    // MARK: - Generic Fetch Function
     public func fetchEntities<T: NSManagedObject>(
         ofType entityType: T.Type,
         predicate: NSPredicate? = nil,
@@ -65,23 +64,44 @@ public class CoreDataStack {
         context: NSManagedObjectContext? = nil
     ) async -> [T] {
         let context = context ?? backgroundContext
-        return await context.perform {
-            let fetchRequest = NSFetchRequest<T>(entityName: String(describing: entityType))
-            fetchRequest.predicate = predicate
-            fetchRequest.sortDescriptors = sortDescriptors
-            if let fetchLimit = fetchLimit {
-                fetchRequest.fetchLimit = fetchLimit
+
+        if #available(iOS 15.0, *) {
+            return await context.perform {
+                self.executeFetch(entityType, predicate, sortDescriptors, fetchLimit, fetchOffset, in: context)
             }
-            if let fetchOffset = fetchOffset {
-                fetchRequest.fetchOffset = fetchOffset
+        } else {
+            return await withCheckedContinuation { continuation in
+                context.perform {
+                    let results = self.executeFetch(entityType, predicate, sortDescriptors, fetchLimit, fetchOffset, in: context)
+                    continuation.resume(returning: results)
+                }
             }
-            do {
-                let results = try context.fetch(fetchRequest)
-                return results
-            } catch {
-                print("❌ Failed to fetch \(String(describing: entityType)): \(error.localizedDescription)")
-                return []
-            }
+        }
+    }
+    // MARK: - Extracted Fetch Logic
+    private func executeFetch<T: NSManagedObject>(
+        _ entityType: T.Type,
+        _ predicate: NSPredicate?,
+        _ sortDescriptors: [NSSortDescriptor]?,
+        _ fetchLimit: Int?,
+        _ fetchOffset: Int?,
+        in context: NSManagedObjectContext
+    ) -> [T] {
+        let fetchRequest = NSFetchRequest<T>(entityName: String(describing: entityType))
+        fetchRequest.predicate = predicate
+        fetchRequest.sortDescriptors = sortDescriptors
+        if let fetchLimit = fetchLimit {
+            fetchRequest.fetchLimit = fetchLimit
+        }
+        if let fetchOffset = fetchOffset {
+            fetchRequest.fetchOffset = fetchOffset
+        }
+        do {
+            let results = try context.fetch(fetchRequest)
+            return results
+        } catch {
+            print("❌ Failed to fetch \(String(describing: entityType)): \(error.localizedDescription)")
+            return []
         }
     }
 }

@@ -4,6 +4,7 @@ import QuizRepo
 import CoreML
 import CoreData
 
+/// Manages quiz session state, including timer logic and navigation.
 class QuizViewModel: ObservableObject {
     @Published var currentIndex = 0
     @Published var maxIndexReached = 0  // Highest question index reached
@@ -14,22 +15,21 @@ class QuizViewModel: ObservableObject {
     @Published var isTimerActive = true
     @Published var bookmarkedQuestions = Set<Int>()
     @Published var isTimerPaused = false
-    @Published var scrollResetID = UUID() // Unique ID to reset scroll position
-    
+    @Published var scrollResetID = UUID()
+
     private let durationEstimator = QuestionDurationEstimator()
     private let coreDataStack = CoreDataStack.shared
-    
-    // Dictionaries to persist state for each question
+
+    // Dictionaries for state persistence.
     var answeredOptions: [Int: Int] = [:]
     var remainingTimes: [Int: Int] = [:]
     var bookmarkStates: [Int: Bool] = [:]
-    
+
     @Published var quizList: [Quiz] = []
     let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
-    
+
     init(quizList: [Quiz]) {
         self.quizList = quizList
-        // Initialize remaining time and bookmark state for every question.
         for index in 0..<quizList.count {
             let question = quizList[index]
             if question.questiionType == "text" || question.questiionType == "htmlText" {
@@ -41,22 +41,22 @@ class QuizViewModel: ObservableObject {
             bookmarkStates[index] = false
         }
     }
-    
+
     var currentQuestion: Quiz? {
         quizList.indices.contains(currentIndex) ? quizList[currentIndex] : nil
     }
-    
+
     var totalCorrectAnswers: Int {
         answeredOptions.filter { index, selectedAnswer in
             selectedAnswer == Int(quizList[index].correctOption)
         }.count
     }
-    
+
     var scorePercentage: Double {
         let totalQuestions = quizList.count
         return totalQuestions > 0 ? (Double(totalCorrectAnswers) / Double(totalQuestions)) * 100 : 0
     }
-    
+
     var solutionMessage: String {
         guard let selected = selectedAnswer,
               let question = currentQuestion else { return "" }
@@ -64,7 +64,7 @@ class QuizViewModel: ObservableObject {
         let correctness = (selected == correct) ? "Correct!" : "Incorrect!"
         return "\(correctness) \(question.solution?.contentData ?? "No solution available.")"
     }
-    
+
     // MARK: - State Persistence
     private func loadPersistedStateForCurrentQuestion() {
         if let savedAnswer = answeredOptions[currentIndex] {
@@ -94,25 +94,22 @@ class QuizViewModel: ObservableObject {
         
         isTimerActive = true
         
-        // Resume timer if unanswered and there is remaining time.
+        // Resume timer if unanswered and time remains.
         if !answerSubmitted && timeRemaining > 0 {
             resumeTimerForCurrentQuestion()
         } else {
             pauseTimerForCurrentQuestion()
         }
     }
-    
-    /// Uses the Core ML model to predict the duration for text/HTML questions.
+
     func estimatedDuration(for question: Quiz) -> TimeInterval {
         guard let text = question.question,
               question.questiionType == "text" || question.questiionType == "htmlText" else {
             return 60
         }
-        
         let words = text.split { $0.isWhitespace }
         let wordCount = Double(words.count)
         let averageWordLength = words.map { Double($0.count) }.reduce(0, +) / max(wordCount, 1)
-        
         do {
             let prediction = try durationEstimator.prediction(wordCount: wordCount, averageWordLength: averageWordLength)
             return prediction.duration
@@ -121,24 +118,23 @@ class QuizViewModel: ObservableObject {
             return 60
         }
     }
-    
+
     func loadCurrentState() {
         loadPersistedStateForCurrentQuestion()
     }
-    
+
     // MARK: - Timer Control
     func pauseTimerForCurrentQuestion() {
         isTimerPaused = true
         remainingTimes[currentIndex] = timeRemaining
     }
-    
+
     func resumeTimerForCurrentQuestion() {
-        // Resume only if there is remaining time and the question hasn't been answered.
         if timeRemaining > 0 && !answerSubmitted {
             isTimerPaused = false
         }
     }
-    
+
     func updateTimer() {
         guard !isTimerPaused, timeRemaining > 0 else { return }
         timeRemaining -= 1
@@ -147,7 +143,7 @@ class QuizViewModel: ObservableObject {
             pauseTimerForCurrentQuestion()
         }
     }
-    
+
     // MARK: - Answer Selection & Navigation
     func selectAnswer(_ index: Int) {
         guard !isAnswerDisabled else { return }
@@ -157,32 +153,30 @@ class QuizViewModel: ObservableObject {
         answeredOptions[currentIndex] = index
         remainingTimes[currentIndex] = timeRemaining
     }
-    
+
     func nextQuestion() {
         scrollResetID = UUID()
         pauseTimerForCurrentQuestion()
-        
         if currentIndex < quizList.count - 1 {
             currentIndex += 1
             if currentIndex > maxIndexReached {
                 maxIndexReached = currentIndex
             }
             loadPersistedStateForCurrentQuestion()
-            resumeTimerForCurrentQuestion() // Resume timer after loading new question
+            resumeTimerForCurrentQuestion()
         }
     }
-    
+
     func previousQuestion() {
         scrollResetID = UUID()
         pauseTimerForCurrentQuestion()
-        
         if currentIndex > 0 {
             currentIndex -= 1
             loadPersistedStateForCurrentQuestion()
-            resumeTimerForCurrentQuestion() // Resume timer after loading new question
+            resumeTimerForCurrentQuestion()
         }
     }
-    
+
     func resetQuiz() {
         currentIndex = 0
         maxIndexReached = 0
@@ -200,23 +194,21 @@ class QuizViewModel: ObservableObject {
             bookmarkStates[index] = false
         }
     }
-    
+
     // MARK: - Bookmark Logic
     @MainActor func toggleBookmark() {
         guard let question = currentQuestion else { return }
         question.hasBookmarked.toggle()
         coreDataStack.saveContext()
-        
         let isBookmarked = bookmarkStates[currentIndex] ?? false
-        let newState = !isBookmarked
-        bookmarkStates[currentIndex] = newState
-        if newState {
+        bookmarkStates[currentIndex] = !isBookmarked
+        if bookmarkStates[currentIndex] ?? false {
             bookmarkedQuestions.insert(currentIndex)
         } else {
             bookmarkedQuestions.remove(currentIndex)
         }
     }
-    
+
     @MainActor
     func fetchBookmarkedQuestions() async {
         let predicate = NSPredicate(format: "hasBookmarked == %@", NSNumber(value: true))

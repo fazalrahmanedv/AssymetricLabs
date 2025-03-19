@@ -1,12 +1,14 @@
 import SwiftUI
 import Lottie
 import AVFoundation
+
 struct QuizSummaryView: View {
-    @Environment(\.dismiss) var dismiss
+    @Environment(\.presentationMode) var presentationMode // ✅ iOS 14+ Compatible
     @ObservedObject var viewModel: QuizViewModel
     var answeredCount: Int { viewModel.answeredOptions.count }
     var totalQuestions: Int { viewModel.quizList.count }
     var scorePercentage: Double { viewModel.scorePercentage }
+    
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
@@ -23,10 +25,12 @@ struct QuizSummaryView: View {
             .background(Color(.systemGroupedBackground))
         }
         .navigationTitle("Quiz Summary")
-        .onAppear(){
+        .onAppear {
             playSound()
         }
     }
+    
+    // ✅ Play Sound Based on Score
     func playSound() {
         if scorePercentage >= 60 {
             AudioPlayer.shared.playSound(forWon: true)
@@ -34,6 +38,7 @@ struct QuizSummaryView: View {
             AudioPlayer.shared.playSound(forWon: false)
         }
     }
+    
     // ✅ Score Header
     private func scoreHeader() -> some View {
         VStack(spacing: 12) {
@@ -91,7 +96,7 @@ struct QuizSummaryView: View {
                 Button(action: {
                     viewModel.currentIndex = index
                     viewModel.loadCurrentState()
-                    dismiss()
+                    dismissView()
                 }) {
                     HStack {
                         Image(systemName: icon(for: index))
@@ -108,11 +113,12 @@ struct QuizSummaryView: View {
                         }
                         
                         Spacer()
-                        Text("Remining time: \(viewModel.remainingTimes[index] ?? 60)s")
+                        Text("Remaining time: \(viewModel.remainingTimes[index] ?? 60)s")
                             .font(.caption)
                             .foregroundColor(.gray)
                     }
                     .padding()
+                    .background(Color(.secondarySystemBackground))
                     .cornerRadius(12)
                     .shadow(color: .black.opacity(0.1), radius: 5)
                 }
@@ -123,8 +129,12 @@ struct QuizSummaryView: View {
     
     // ✅ Status for each question
     private func status(for index: Int) -> String {
-        if viewModel.answeredOptions[index] != nil {
-            return "Answered"
+        if let currentQuestion = viewModel.answeredOptions[index]{
+            if  currentQuestion == viewModel.quizList[index].correctOption {
+                return "Correct!"
+            } else {
+                return "Wronng!"
+            }
         } else if viewModel.bookmarkStates[index] == true {
             return "Bookmarked"
         } else {
@@ -134,8 +144,12 @@ struct QuizSummaryView: View {
     
     // ✅ Icon for each question
     private func icon(for index: Int) -> String {
-        if viewModel.answeredOptions[index] != nil {
-            return "checkmark.seal.fill"
+        if let currentQuestion = viewModel.answeredOptions[index]{
+            if  currentQuestion == viewModel.quizList[index].correctOption {
+                return "checkmark.seal.fill"
+            }  else {
+                return "xmark.circle.fill"
+            }
         } else if viewModel.bookmarkStates[index] == true {
             return "bookmark.fill"
         } else {
@@ -145,8 +159,12 @@ struct QuizSummaryView: View {
     
     // ✅ Icon Color
     private func iconColor(for index: Int) -> Color {
-        if viewModel.answeredOptions[index] != nil {
-            return .green
+        if let currentQuestion = viewModel.answeredOptions[index]{
+            if  currentQuestion == viewModel.quizList[index].correctOption {
+                return .green
+            } else {
+                return .red
+            }
         } else if viewModel.bookmarkStates[index] == true {
             return .yellow
         } else {
@@ -156,8 +174,12 @@ struct QuizSummaryView: View {
     
     // ✅ Text Color
     private func color(for index: Int) -> Color {
-        if viewModel.answeredOptions[index] != nil {
-            return .green
+        if let currentQuestion = viewModel.answeredOptions[index]{
+            if  currentQuestion == viewModel.quizList[index].correctOption {
+                return .green
+            } else {
+                return .red
+            }
         } else if viewModel.bookmarkStates[index] == true {
             return .yellow
         } else {
@@ -169,6 +191,7 @@ struct QuizSummaryView: View {
     private func shareScore() {
         let scoreText = "I scored \(viewModel.totalCorrectAnswers * 100) points in the quiz! 🏆 Can you beat my score?"
         let activityController = UIActivityViewController(activityItems: [scoreText], applicationActivities: nil)
+        
         if let topController = UIApplication.shared.windows.first?.rootViewController {
             topController.present(activityController, animated: true, completion: nil)
         }
@@ -195,10 +218,18 @@ struct QuizSummaryView: View {
             return .red
         }
     }
+    
+    // ✅ Dismiss View (Support for iOS 14+)
+    private func dismissView() {
+        presentationMode.wrappedValue.dismiss()
+    }
 }
+
+// ✅ Lottie Celebration View
 struct LottieCelebrationView: UIViewRepresentable {
     var animationName: String
-    func makeUIView(context: Context) -> some UIView {
+    
+    func makeUIView(context: Context) -> UIView {
         let view = UIView()
         let animationView = LottieAnimationView(name: animationName)
         animationView.loopMode = .loop
@@ -215,5 +246,5 @@ struct LottieCelebrationView: UIViewRepresentable {
         return view
     }
     
-    func updateUIView(_ uiView: UIViewType, context: Context) {}
+    func updateUIView(_ uiView: UIView, context: Context) {}
 }

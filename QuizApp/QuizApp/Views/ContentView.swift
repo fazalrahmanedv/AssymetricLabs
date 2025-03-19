@@ -1,6 +1,7 @@
 import SwiftUI
 import QuizRepo
 import QuizUI
+
 struct StreakView: View {
     var streak: Int = 3
     
@@ -25,11 +26,13 @@ struct StreakView: View {
         .accessibilityElement(children: .combine)
     }
 }
+
 struct Achievement: Identifiable {
     let id = UUID()
     let name: String
     let iconName: String
 }
+
 struct AchievementsBanner: View {
     let achievements: [Achievement] = [
         Achievement(name: "Speedster", iconName: "bolt.fill"),
@@ -72,6 +75,7 @@ struct AchievementsBanner: View {
         .accessibilityElement(children: .contain)
     }
 }
+
 struct ContentView: View {
     @StateObject private var viewModel = CountriesViewModel(
         fetchCountriesUseCase: FetchCountriesUseCaseImpl(repository: QuizAppRepositoryImpl())
@@ -112,137 +116,148 @@ struct ContentView: View {
     
     var body: some View {
         NavigationView {
-            ZStack {
-                backgroundGradient
-                    .edgesIgnoringSafeArea(.all)
-                ScrollView {
-                    VStack(spacing: 20) {
-                        StreakView()
-                        AchievementsBanner()
-                        
-                        // Header section for country selection.
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("Choose your country:")
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .font(.headline)
-                            CountrySelectionButton(selectedCountry: $selectedCountry, showPicker: $showPicker)
-                        }
-                        .padding()
-                        Spacer()
-                        VStack(spacing: 20) {
-                            Button(action: {
-                                navigateToQuiz = true
-                            }) {
-                                HStack {
-                                    Text("🧠")
-                                        .font(.system(size: 24))
-                                        .accessibilityHidden(true) // Avoid redundant VoiceOver description
-                                    
-                                    Text("Start Quiz")
-                                        .font(.system(size: 24, weight: .bold))
-                                        .gradientForeground(colors: [Color.blue, Color.purple])
-                                        .dynamicTypeSize(.large ... .xxLarge) // Supports text scaling
-                                }
-                                .padding()
-                                .frame(maxWidth: .infinity, minHeight: 50) // Ensures a tap area of at least 44x44 pt
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color.primary.opacity(0.1)) // Improves contrast
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 12)
-                                                .stroke(
-                                                    LinearGradient(colors: [.white, .gray, .white], startPoint: .leading, endPoint: .trailing),
-                                                    lineWidth: 2
-                                                )
-                                        )
-                                        .shadow(color: .white.opacity(0.8), radius: 5, x: 0, y: 0)
-                                )
-                            }
-                            .accessibilityLabel("Start Quiz")
-                            .accessibilityHint("Opens a new quiz session")
-                            .buttonStyle(PlainButtonStyle())
-                            .padding()
-                            NavigationLink(
-                                destination: QuizView(quizList: [], isFromBookmarks: true),
-                                isActive: $navigateToBookmarkedQuiz
-                            ) {
-                                EmptyView()
-                            }
-                            Button(action: {
-                                navigateToBookmarkedQuiz = true
-                            }) {
-                                Label("Solve Bookmarks", systemImage: "bookmark.fill")
-                                    .font(.system(size: 24, weight: .bold))
-                                    .padding()
-                                    .frame(maxWidth: .infinity, minHeight: 44)
-                            }
-                            .accessibilityLabel("Solve bookmarked quizzes")
-                            .accessibilityHint("Opens a list of bookmarked questions for review")
-                            .buttonStyle(PlainButtonStyle())
-                            .padding(20)
-                        }
-                    }
-                    .padding(.horizontal, 20)
-                    .onAppear {
-                        viewModel.loadData()
-                    }
-                    .sheet(isPresented: .constant(!hasOnboarded)) {
-                        OnboardingView(
-                            title: "Welcome to Infinity Quiz",
-                            rows: [
-                                OnboardingRow(
-                                    image: Image(systemName: "questionmark.circle"),
-                                    title: "Challenge Your Knowledge",
-                                    description: "Test your brain with a range of trivia questions."
-                                ),
-                                OnboardingRow(
-                                    image: Image(systemName: "lightbulb.fill"),
-                                    title: "Discover New Facts",
-                                    description: "Learn interesting trivia with every quiz."
-                                ),
-                                OnboardingRow(
-                                    image: Image(systemName: "gamecontroller.fill"),
-                                    title: "Fun & Engaging",
-                                    description: "Enjoy quick, entertaining quizzes."
-                                )
-                            ],
-                            actionTitle: "Get Started",
-                            action: { hasOnboarded = true }
-                        )
-                    }
-                    // Country Picker sheet.
-                    .sheet(isPresented: $showPicker) {
-                        CountryPickerView(
-                            countries: viewModel.countryList,
-                            searchText: $searchText,
-                            selectedCountry: $selectedCountry,
-                            showPicker: $showPicker
-                        )
-                    }
-                    // Hidden navigation link to the QuizLandingPage.
-                    NavigationLink(destination: QuizLandingPage(), isActive: $navigateToQuiz) {
-                        EmptyView()
-                    }
-                    .hidden()
-                }
-                .navigationTitle("Infinity Quiz") // Apply navigationTitle here
-            }
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    if let country = selectedCountry {
-                        Button(action: {
-                            showPicker = true
-                        }) {
-                            HStack(spacing: 4) {
-                                Text(country.flag ?? "")
-                                Image(systemName: "chevron.down")
-                            }
-                        }
-                    }
-                }
-            }
+            content
+                .navigationBarTitle("Infinity Quiz")
+                .navigationBarItems(trailing: countryToolbarItem)
         }
         .navigationViewStyle(StackNavigationViewStyle())
+    }
+    
+    @ViewBuilder
+    private var countryToolbarItem: some View {
+        if let country = selectedCountry {
+            Button(action: {
+                showPicker = true
+            }) {
+                HStack(spacing: 4) {
+                    Text(country.flag ?? "")
+                    Image(systemName: "chevron.down")
+                }
+            }
+        } else {
+            EmptyView()
+        }
+    }
+    
+    private var content: some View {
+        ZStack {
+            backgroundGradient
+                .edgesIgnoringSafeArea(.all)
+            
+            ScrollView {
+                VStack(spacing: 20) {
+                    StreakView()
+                    AchievementsBanner()
+                    
+                    // Header section for country selection.
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Choose your country:")
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .font(.headline)
+                        CountrySelectionButton(selectedCountry: $selectedCountry, showPicker: $showPicker)
+                    }
+                    .padding()
+                    
+                    Spacer()
+                    
+                    VStack(spacing: 20) {
+                        Button(action: {
+                            navigateToQuiz = true
+                        }) {
+                            HStack {
+                                Text("🧠")
+                                    .font(.system(size: 24))
+                                    .accessibilityHidden(true) // Avoid redundant VoiceOver description
+                                
+                                Text("Start Quiz")
+                                    .font(.system(size: 24, weight: .bold))
+                                    .gradientForeground(colors: [Color.blue, Color.purple])
+                            }
+                            .padding()
+                            .frame(maxWidth: .infinity, minHeight: 50) // Ensures a tap area of at least 44x44 pt
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color.primary.opacity(0.1)) // Improves contrast
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(
+                                                LinearGradient(colors: [.white, .gray, .white], startPoint: .leading, endPoint: .trailing),
+                                                lineWidth: 2
+                                            )
+                                    )
+                                    .shadow(color: .white.opacity(0.8), radius: 5, x: 0, y: 0)
+                            )
+                        }
+                        .accessibilityLabel("Start Quiz")
+                        .accessibilityHint("Opens a new quiz session")
+                        .buttonStyle(PlainButtonStyle())
+                        .padding()
+                        
+                        NavigationLink(
+                            destination: QuizView(quizList: [], isFromBookmarks: true),
+                            isActive: $navigateToBookmarkedQuiz
+                        ) {
+                            EmptyView()
+                        }
+                        
+                        Button(action: {
+                            navigateToBookmarkedQuiz = true
+                        }) {
+                            Label("Solve Bookmarks", systemImage: "bookmark.fill")
+                                .font(.system(size: 24, weight: .bold))
+                                .padding()
+                                .frame(maxWidth: .infinity, minHeight: 44)
+                        }
+                        .accessibilityLabel("Solve bookmarked quizzes")
+                        .accessibilityHint("Opens a list of bookmarked questions for review")
+                        .buttonStyle(PlainButtonStyle())
+                        .padding(20)
+                    }
+                }
+                .padding(.horizontal, 20)
+                .onAppear {
+                    viewModel.loadCountryList()
+                }
+                .sheet(isPresented: .constant(!hasOnboarded)) {
+                    OnboardingView(
+                        title: "Welcome to Infinity Quiz",
+                        rows: [
+                            OnboardingRow(
+                                image: Image(systemName: "questionmark.circle"),
+                                title: "Challenge Your Knowledge",
+                                description: "Test your brain with a range of trivia questions."
+                            ),
+                            OnboardingRow(
+                                image: Image(systemName: "lightbulb.fill"),
+                                title: "Discover New Facts",
+                                description: "Learn interesting trivia with every quiz."
+                            ),
+                            OnboardingRow(
+                                image: Image(systemName: "gamecontroller.fill"),
+                                title: "Fun & Engaging",
+                                description: "Enjoy quick, entertaining quizzes."
+                            )
+                        ],
+                        actionTitle: "Get Started",
+                        action: { hasOnboarded = true }
+                    )
+                }
+                // Country Picker sheet.
+                .sheet(isPresented: $showPicker) {
+                    CountryPickerView(
+                        countries: viewModel.countryList,
+                        searchText: $searchText,
+                        selectedCountry: $selectedCountry,
+                        showPicker: $showPicker
+                    )
+                }
+                // Hidden navigation link to the QuizLandingPage.
+                NavigationLink(destination: QuizLandingPage(), isActive: $navigateToQuiz) {
+                    EmptyView()
+                }
+                .hidden()
+            }
+        }
     }
 }
 
@@ -252,6 +267,7 @@ struct ContentView_Previews: PreviewProvider {
             .previewLayout(.sizeThatFits)
     }
 }
+
 extension View {
     func gradientText(colors: [Color]) -> some View {
         self.overlay(
@@ -264,6 +280,7 @@ extension View {
         .mask(self)
     }
 }
+
 extension View {
     func gradientForeground(colors: [Color]) -> some View {
         self.overlay(
@@ -274,5 +291,25 @@ extension View {
             )
         )
         .mask(self)
+    }
+}
+
+struct CountryPickerToolbar: View {
+    @Binding var showPicker: Bool
+    var country: Countries?
+    
+    var body: some View {
+        HStack(spacing: 4) {
+            if let country = country {
+                Button(action: {
+                    showPicker = true
+                }) {
+                    HStack {
+                        Text(country.flag ?? "")
+                        Image(systemName: "chevron.down")
+                    }
+                }
+            }
+        }
     }
 }

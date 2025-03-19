@@ -1,12 +1,13 @@
 import SwiftUI
 import QuizRepo
 import CoreData
+
 public struct CountryPickerView: View {
     public let countries: [Countries]
     @Binding public var searchText: String
     @Binding public var selectedCountry: Countries?
     @Binding public var showPicker: Bool
-    @Environment(\.dismiss) private var dismiss
+    
     public init(
         countries: [Countries],
         searchText: Binding<String>,
@@ -18,6 +19,7 @@ public struct CountryPickerView: View {
         self._selectedCountry = selectedCountry
         self._showPicker = showPicker
     }
+    
     private var filteredCountries: [Countries] {
         if searchText.isEmpty {
             return countries
@@ -27,59 +29,60 @@ public struct CountryPickerView: View {
             }
         }
     }
+    
     public var body: some View {
-        if #available(iOS 16.0, *) {
-            NavigationStack {
-                VStack {
-                    // Search Bar
-                    TextField("Search Country...", text: $searchText)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .padding()
-                    
-                    List(filteredCountries, id: \.self) { country in
-                        Button {
-                            selectedCountry = country
-                            dismiss() // Close picker after selection
-                        } label: {
-                            countryRowView(country)
-                        }
-                    }
-                    .overlay {
-                        if filteredCountries.isEmpty {
-                            if #available(iOS 17.0, *) {
-                                ContentUnavailableView("No countries found", systemImage: "magnifyingglass")
-                            } else {
-                                VStack {
-                                    Image(systemName: "magnifyingglass")
-                                        .resizable()
-                                        .scaledToFit()
-                                        .frame(width: 60, height: 60)
-                                        .foregroundColor(.gray)
-                                    Text("No countries found")
-                                        .font(.headline)
-                                        .foregroundColor(.gray)
-                                        .padding(.top, 8)
+        Group {
+            if #available(iOS 16.0, *) {
+                // Use NavigationStack for iOS 16+
+                NavigationStack {
+                    content
+                        .toolbar {
+                            ToolbarItem(placement: .topBarTrailing) {
+                                Button("Close") {
+                                    showPicker = false
                                 }
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
                             }
                         }
-                    }
                 }
-                .navigationTitle("Select a Country")
-                .navigationBarTitleDisplayMode(.inline) // Small inline title
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("Close") {
-                            dismiss()
-                        }
-                    }
+            } else {
+                // Use NavigationView for iOS 14+
+                NavigationView {
+                    content
+                        .navigationBarTitle("Select a Country", displayMode: .inline)
+                        .navigationBarItems(trailing: Button("Close") {
+                            showPicker = false
+                        })
                 }
             }
-        } else {
-            EmptyView()
         }
     }
-
+    
+    private var content: some View {
+        VStack {
+            // Search Bar
+            TextField("Search Country...", text: $searchText)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .padding()
+            
+            // Use ZStack to overlay empty state for iOS 14+ fallback
+            ZStack {
+                List(filteredCountries, id: \.self) { country in
+                    Button {
+                        selectedCountry = country
+                        showPicker = false
+                    } label: {
+                        countryRowView(country)
+                    }
+                }
+                
+                if filteredCountries.isEmpty {
+                    noResultsView
+                        .transition(.opacity) // Optional fade-in for smooth UI
+                }
+            }
+        }
+    }
+    
     @ViewBuilder
     private func countryRowView(_ country: Countries) -> some View {
         HStack {
@@ -87,5 +90,24 @@ public struct CountryPickerView: View {
             Spacer()
         }
     }
-
+    
+    @ViewBuilder
+    private var noResultsView: some View {
+        if #available(iOS 17.0, *) {
+            ContentUnavailableView("No countries found", systemImage: "magnifyingglass")
+        } else {
+            VStack {
+                Image(systemName: "magnifyingglass")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 60, height: 60)
+                    .foregroundColor(.gray)
+                Text("No countries found")
+                    .font(.headline)
+                    .foregroundColor(.gray)
+                    .padding(.top, 8)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
 }
