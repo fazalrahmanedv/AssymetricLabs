@@ -7,6 +7,7 @@
 
 import XCTest
 
+@testable import QuizApp
 final class QuizAppUITests: XCTestCase {
 
     override func setUpWithError() throws {

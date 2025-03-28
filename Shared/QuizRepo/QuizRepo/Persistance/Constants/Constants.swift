@@ -2,7 +2,6 @@ import CoreData
 public struct UserDefaultsKeys {
     public static let isLoggedIn = "isLoggedIn"
     public static let baseURL = "baseURL"
-    public static let accessToken = "accesstoken"
 }
 public struct DownloadStatus {
     public static let download = "download"

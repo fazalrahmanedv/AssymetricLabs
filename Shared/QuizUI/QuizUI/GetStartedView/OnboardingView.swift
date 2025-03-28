@@ -51,7 +51,6 @@ public struct OnboardingView: View {
                     .padding(32)
                 }
             }
-
             // Action Button
             if #available(iOS 15.0, *) {
                 Button(action: action) {

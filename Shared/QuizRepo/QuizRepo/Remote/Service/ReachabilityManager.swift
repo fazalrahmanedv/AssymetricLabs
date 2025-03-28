@@ -1,5 +1,4 @@
 import Network
-//import SwiftUI
 import Combine
 public class NetworkManager: ObservableObject {
     private var monitor: NWPathMonitor

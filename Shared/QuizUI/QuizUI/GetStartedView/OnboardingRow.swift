@@ -1,11 +1,9 @@
 import SwiftUI
-
 public struct OnboardingRow: View {
     let id = UUID()
     let image: Image
     let title: LocalizedStringKey
     let description: LocalizedStringKey
-    
     public init(
         image: Image,
         title: LocalizedStringKey,
@@ -15,7 +13,6 @@ public struct OnboardingRow: View {
         self.title = title
         self.description = description
     }
-    
     public var body: some View {
         HStack(spacing: 24) {
             image
@@ -40,7 +37,6 @@ public struct OnboardingRow: View {
         }
     }
 }
-
 #Preview {
     OnboardingRow(image: Image(systemName: "xmark"), title: "Delete", description: "Delete things")
 }

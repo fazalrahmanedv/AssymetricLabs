@@ -133,7 +133,7 @@ struct QuizSummaryView: View {
             if  currentQuestion == viewModel.quizList[index].correctOption {
                 return "Correct!"
             } else {
-                return "Wronng!"
+                return "Wrong!"
             }
         } else if viewModel.bookmarkStates[index] == true {
             return "Bookmarked"

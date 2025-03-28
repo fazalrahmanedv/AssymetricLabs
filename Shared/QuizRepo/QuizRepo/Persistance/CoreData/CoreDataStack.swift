@@ -41,8 +41,8 @@ public class CoreDataStack {
         }
     }
     // MARK: - Delete All Data
-    public func deleteAllData<T: NSManagedObject>(for entityType: T.Type) async {
-        await backgroundContext.perform { [weak self] in
+    public func deleteAllData<T: NSManagedObject>(for entityType: T.Type) {
+        backgroundContext.perform { [weak self] in
             guard let self = self else { return }
             let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: String(describing: entityType))
             let deleteRequest = NSBatchDeleteRequest(fetchRequest: fetchRequest)

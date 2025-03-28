@@ -2,23 +2,19 @@ import CoreData
 import Combine
 import QuizRepo
 import UIKit
-
 /// Abstraction for a repository that provides quiz and country data.
 protocol QuizAppRepository {
     func fetchCountryList() async throws -> [Countries]
     func fetchQuizList() async throws -> [Quiz]
 }
-
 /// Repository implementation that fetches data from an API and Core Data.
 class QuizAppRepositoryImpl: QuizAppRepository {
     private let apiManager: ApiManager
     private let coreDataStack: CoreDataStack
-
     init(apiManager: ApiManager = .shared, coreDataStack: CoreDataStack = .shared) {
         self.apiManager = apiManager
         self.coreDataStack = coreDataStack
     }
-
     // MARK: - Fetch Country List
     func fetchCountryList() async throws -> [Countries] {
         let savedCountries = await fetchSavedCountries()
@@ -47,12 +43,10 @@ class QuizAppRepositoryImpl: QuizAppRepository {
         switch result {
         case .success(let quizList):
             try await saveQuizzesToCoreData(quizList)
-            
             // Concurrently download images for quizzes and solutions.
             let imageQuizzes = await fetchImageQuizzes()
             let imageSolutions = await fetchImageSolutions()
             Logger.log("📷 Found \(imageQuizzes.count) quizzes & \(imageSolutions.count) solutions with images")
-            
             await withTaskGroup(of: Void.self) { group in
                 for quiz in imageQuizzes {
                     group.addTask { await self.cacheQuizImage(quiz) }
@@ -67,12 +61,10 @@ class QuizAppRepositoryImpl: QuizAppRepository {
             throw error
         }
     }
-
     // MARK: - Core Data Operations
     @MainActor
     private func saveCountriesToCoreData(_ countries: [Country]) async throws {
         let context = coreDataStack.backgroundContext
-        
         if #available(iOS 15.0, *) {
             try await context.perform(schedule: .immediate) {
                 countries.forEach { _ = Countries.from($0, context: context) }
@@ -98,9 +90,8 @@ class QuizAppRepositoryImpl: QuizAppRepository {
     @MainActor
     private func saveQuizzesToCoreData(_ quizzes: [QuizResponse]) async throws {
         let context = coreDataStack.backgroundContext
-        await coreDataStack.deleteAllData(for: Quiz.self)
-        await coreDataStack.deleteAllData(for: QuizSolution.self)
-        
+        coreDataStack.deleteAllData(for: Quiz.self)
+        coreDataStack.deleteAllData(for: QuizSolution.self)
         if #available(iOS 15.0, *) {
             try await context.perform(schedule: .immediate) {
                 quizzes.forEach { _ = Quiz.from($0, context: context) }
@@ -129,21 +120,18 @@ class QuizAppRepositoryImpl: QuizAppRepository {
             sortDescriptors: [NSSortDescriptor(key: "name", ascending: true)]
         )
     }
-
     private func fetchImageQuizzes() async -> [Quiz] {
         await coreDataStack.fetchEntities(
             ofType: Quiz.self,
             predicate: NSPredicate(format: "questiionType == %@", "image")
         )
     }
-
     private func fetchImageSolutions() async -> [QuizSolution] {
         await coreDataStack.fetchEntities(
             ofType: QuizSolution.self,
             predicate: NSPredicate(format: "contentType == %@", "image")
         )
     }
-
     private func fetchValidQuizzes() async -> [Quiz] {
         let predicates: [NSPredicate] = [
             NSPredicate(format: "question != nil AND question != ''"),
@@ -156,16 +144,13 @@ class QuizAppRepositoryImpl: QuizAppRepository {
         ]
         return await coreDataStack.fetchEntities(ofType: Quiz.self, predicate: NSCompoundPredicate(andPredicateWithSubpredicates: predicates))
     }
-
     // MARK: - Image Download & Cache
     private func cacheQuizImage(_ quiz: Quiz) async {
         await cacheImage(urlString: quiz.question)
     }
-
     private func cacheSolutionImage(_ solution: QuizSolution) async {
         await cacheImage(urlString: solution.contentData)
     }
-
     private func cacheImage(urlString: String?) async {
         guard let urlString = urlString, let url = URL(string: urlString) else { return }
         if ImageCache.shared.image(forKey: urlString) != nil {
@@ -179,7 +164,6 @@ class QuizAppRepositoryImpl: QuizAppRepository {
             Logger.log("❌ Image download failed: \(error)")
         }
     }
-
     private func downloadAndCacheImage(from url: URL) async throws -> UIImage {
         let urlString = url.absoluteString
         if let cachedImage = ImageCache.shared.image(forKey: urlString) {
@@ -204,28 +188,23 @@ class QuizAppRepositoryImpl: QuizAppRepository {
     }
 }
 import UIKit
-
 /// In-memory image cache using NSCache.
 public final class ImageCache {
     static let shared = ImageCache()
     private let cache = NSCache<NSString, UIImage>()
-
     private init() {
         cache.countLimit = 100
         cache.totalCostLimit = 50 * 1024 * 1024 // 50MB
     }
-
     func image(forKey key: String) -> UIImage? {
         cache.object(forKey: key as NSString)
     }
-
     func setImage(_ image: UIImage, forKey key: String) {
         let cost = image.pngData()?.count ?? 0
         cache.setObject(image, forKey: key as NSString, cost: cost)
     }
 }
 import Foundation
-
 /// Utility for logging messages.
 struct Logger {
     static func log(_ message: String) {
@@ -258,7 +237,6 @@ extension Quiz {
         quizEntity.question = quiz.question
         // Assume quiz.questionType is an enum with a rawValue of String.
         quizEntity.questiionType = quiz.questionType?.rawValue ?? "text"
-        
         // Map solution if available.
         if let solutionResponse = quiz.solution?.first {
             let solutionEntity = QuizSolution(context: context)
@@ -267,7 +245,6 @@ extension Quiz {
             solutionEntity.ofQuiz = quizEntity
             quizEntity.solution = solutionEntity
         }
-        
         return quizEntity
     }
 }
